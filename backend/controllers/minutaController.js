@@ -3,7 +3,7 @@
  * Geração da minuta de resposta ao ofício via Claude
  */
 
-const { gerarMinuta } = require('../services/claudeService');
+const { gerarMinuta, refinarMinuta } = require('../services/claudeService');
 const { modelos, oficios, modelosPermanentes, ultimaMinuta } = require('../services/store');
 
 async function gerarMinutaHandler(req, res, next) {
@@ -73,4 +73,42 @@ async function gerarMinutaHandler(req, res, next) {
   }
 }
 
-module.exports = { gerarMinutaHandler };
+async function refinarMinutaHandler(req, res, next) {
+  try {
+    const { textoAtual, mensagem, historico } = req.body;
+
+    if (!textoAtual) {
+      return res.status(400).json({
+        success: false,
+        message: 'textoAtual é obrigatório.',
+      });
+    }
+    if (!mensagem || !mensagem.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'mensagem é obrigatória.',
+      });
+    }
+
+    console.log('[Refinar] Refinando minuta com Claude...');
+
+    const textoRefinado = await refinarMinuta({
+      textoAtual,
+      mensagem: mensagem.trim(),
+      historico: historico || [],
+    });
+
+    // Atualiza o store com o texto mais recente
+    ultimaMinuta.texto = textoRefinado;
+
+    res.json({
+      success: true,
+      texto: textoRefinado,
+      minuta: textoRefinado,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { gerarMinutaHandler, refinarMinutaHandler };

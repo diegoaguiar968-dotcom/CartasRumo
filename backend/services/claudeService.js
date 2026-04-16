@@ -225,4 +225,55 @@ INSTRUÇÕES:
   );
 }
 
-module.exports = { callClaude, extrairBriefingOficio, gerarMinuta };
+/**
+ * Refina uma minuta já gerada com base em uma instrução do usuário,
+ * mantendo o histórico da conversa para contexto.
+ * @param {Object} params
+ * @param {string} params.textoAtual - Texto atual da minuta
+ * @param {string} params.mensagem - Instrução do usuário
+ * @param {Array}  params.historico - Array de {role, content} com o histórico anterior
+ * @returns {Promise<string>} - Texto da minuta refinada
+ */
+async function refinarMinuta({ textoAtual, mensagem, historico }) {
+  const systemPrompt = `Você é o Assistente Regulatório do grupo Rumo, especializado em redigir e refinar respostas institucionais a ofícios da ANTT.
+
+Você está no modo de REFINAMENTO COLABORATIVO. Sua tarefa é:
+1. Entender a instrução do usuário sobre a minuta atual
+2. Aplicar a modificação solicitada mantendo o tom formal técnico-jurídico
+3. Retornar o TEXTO COMPLETO DA MINUTA após a modificação
+
+PADRÕES OBRIGATÓRIOS:
+- Tom: formal técnico-jurídico, nunca coloquial
+- Tratamento: "Vossa Senhoria" para diretores/superintendentes
+- Verbos na terceira pessoa do singular
+- Retornar SEMPRE o texto completo atualizado da minuta, nunca apenas um trecho
+
+Quando o usuário pedir uma modificação, aplique-a com precisão e retorne a minuta completa e reformulada.
+Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a minuta atualizada (mesmo que sem mudanças).`;
+
+  // Monta o histórico da conversa, iniciando com a minuta atual no primeiro turno
+  const messages = [];
+
+  if (historico.length === 0) {
+    // Primeira interação: inclui a minuta completa no contexto
+    messages.push({
+      role: 'user',
+      content: `Esta é a minuta atual que precisa ser refinada:\n\n---\n${textoAtual}\n---\n\nMinha solicitação: ${mensagem}`,
+    });
+  } else {
+    // Interações subsequentes: reconstrói o histórico
+    messages.push({
+      role: 'user',
+      content: `Esta é a minuta atual que precisa ser refinada:\n\n---\n${historico[0].minutaRef || textoAtual}\n---\n\nMinha solicitação: ${historico[0].content}`,
+    });
+    for (let i = 1; i < historico.length; i++) {
+      messages.push({ role: historico[i].role, content: historico[i].content });
+    }
+    messages.push({ role: 'user', content: mensagem });
+  }
+
+  const resposta = await callClaude(messages, systemPrompt, 3500);
+  return resposta;
+}
+
+module.exports = { callClaude, extrairBriefingOficio, gerarMinuta, refinarMinuta };

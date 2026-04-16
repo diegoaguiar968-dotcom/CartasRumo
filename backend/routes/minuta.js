@@ -1,8 +1,8 @@
 // routes/minuta.js
 const router = require('express').Router();
-const { gerarMinutaHandler } = require('../controllers/minutaController');
+const { gerarMinutaHandler, refinarMinutaHandler } = require('../controllers/minutaController');
 
 router.post('/generate', gerarMinutaHandler);
-router.get('/generate', gerarMinutaHandler); // compatibilidade com frontend
+router.post('/refinar', refinarMinutaHandler);
 
 module.exports = router;
