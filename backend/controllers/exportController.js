@@ -64,10 +64,10 @@ async function exportarDocx(req, res, next) {
 
       const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: false });
 
-      // Converte o conteúdo em array de parágrafos (sem markdown, sem <br/> forçado)
+      // Converte o conteúdo em array de parágrafos — separa em qualquer quebra de linha
       const paragrafos = conteudo
-        .split(/\n\n+/)
-        .map(p => p.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim())
+        .split(/\n+/)
+        .map(p => p.replace(/\s{2,}/g, ' ').trim())
         .filter(Boolean);
 
       doc.render({

@@ -9,15 +9,17 @@ const { gerarMinuta, refinarMinuta } = require('../services/claudeService');
 const { getTemplate } = require('../services/docxTemplates');
 const { modelos, oficios, modelosPermanentes, ultimaMinuta } = require('../services/store');
 
-// Remove markdown artifacts gerados pela IA (**, --, ##, etc.)
+// Remove markdown artifacts e prefixos indesejados gerados pela IA
 function limparMarkdown(texto) {
   return texto
-    .replace(/\*\*(.+?)\*\*/gs, '$1')   // **negrito** → texto
-    .replace(/\*(.+?)\*/gs, '$1')        // *itálico* → texto
-    .replace(/^#{1,6}\s+/gm, '')         // ## Título → Título
-    .replace(/^---+\s*$/gm, '')          // linhas --- → removidas
-    .replace(/^___+\s*$/gm, '')          // linhas ___ → removidas
-    .replace(/\n{3,}/g, '\n\n')          // 3+ quebras → 2 quebras
+    .replace(/\*\*(.+?)\*\*/gs, '$1')          // **negrito** → texto
+    .replace(/\*(.+?)\*/gs, '$1')              // *itálico* → texto
+    .replace(/^#{1,6}\s+/gm, '')               // ## Título → Título
+    .replace(/^---+\s*$/gm, '')                // linhas --- → removidas
+    .replace(/^___+\s*$/gm, '')                // linhas ___ → removidas
+    .replace(/^minuta\s+refinada[:\s]*/im, '') // "Minuta Refinada:" → removido
+    .replace(/^minuta[:\s]+/im, '')            // "Minuta:" → removido
+    .replace(/\n{3,}/g, '\n\n')                // 3+ quebras → 2 quebras
     .trim();
 }
 

@@ -261,7 +261,9 @@ PADRÕES OBRIGATÓRIOS:
 - Tom: formal técnico-jurídico, nunca coloquial
 - Tratamento: "Vossa Senhoria" para diretores/superintendentes
 - Verbos na terceira pessoa do singular
-- Retornar SEMPRE o texto completo atualizado da minuta, nunca apenas um trecho
+- Retornar SEMPRE o texto completo atualizado, nunca apenas um trecho
+- NUNCA adicione títulos, prefixos ("Minuta Refinada:", "Minuta:") ou comentários antes do texto
+- Comece diretamente com o primeiro parágrafo da minuta
 
 Quando o usuário pedir uma modificação, aplique-a com precisão e retorne a minuta completa e reformulada.
 Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a minuta atualizada (mesmo que sem mudanças).`;
