@@ -3,6 +3,8 @@
  * Geração da minuta de resposta ao ofício via Claude
  */
 
+const fs = require('fs');
+const path = require('path');
 const { gerarMinuta, refinarMinuta } = require('../services/claudeService');
 const { getTemplate } = require('../services/docxTemplates');
 const { modelos, oficios, modelosPermanentes, ultimaMinuta } = require('../services/store');
@@ -45,6 +47,11 @@ async function gerarMinutaHandler(req, res, next) {
     console.log(`[Minuta] Modelos de referência: ${modelos.length}`);
     console.log(`[Minuta] Pontos a responder: ${pontosRespondidos?.length || 0}`);
 
+    const templatePath = template.arquivo
+      ? path.join(__dirname, '../templates', template.arquivo)
+      : null;
+    const usaTemplate = !!(templatePath && fs.existsSync(templatePath));
+
     const textoMinuta = await gerarMinuta({
       briefing,
       signatario,
@@ -52,6 +59,7 @@ async function gerarMinutaHandler(req, res, next) {
       pontosRespondidos,
       textoModelosReferencia,
       templateHint: template.claudeHint,
+      usaTemplate,
     });
 
     console.log('[Minuta] Gerada com sucesso.');
@@ -61,6 +69,11 @@ async function gerarMinutaHandler(req, res, next) {
     ultimaMinuta.signatario = signatario || '';
     ultimaMinuta.cargo = cargo || '';
     ultimaMinuta.modeloId = modeloId;
+    ultimaMinuta.signatarioAntt = briefing?.signatarioAntt || '';
+    ultimaMinuta.malha = briefing?.malha || '';
+    ultimaMinuta.processo = briefing?.numero || '';
+    ultimaMinuta.assunto = `Atendimento ao ${briefing?.numero || 'ofício da ANTT'} — ${briefing?.natureza || ''}`.trim();
+    ultimaMinuta.referencia = briefing?.numero || '';
 
     // Retorna em múltiplos campos para compatibilidade com o frontend
     res.json({

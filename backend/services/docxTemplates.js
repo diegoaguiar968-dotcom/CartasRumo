@@ -35,6 +35,7 @@ const TEMPLATES = [
     nome: 'Resposta com Documentação',
     descricao: 'Quando a resposta encaminha documentos como anexos ou inclui referências a arquivos.',
     uso: 'anexos · encaminhamentos · documentos',
+    arquivo: '3-modelo-anexos.docx',
     docxStyle: {
       fonte: 'Calibri',
       tamanho: 24,

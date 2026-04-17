@@ -151,7 +151,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
  * @param {string} params.textoModelosReferencia - Texto concatenado dos modelos de referência
  * @returns {Promise<string>} - Texto da minuta gerada
  */
-async function gerarMinuta({ briefing, signatario, cargo, pontosRespondidos, textoModelosReferencia, templateHint }) {
+async function gerarMinuta({ briefing, signatario, cargo, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate }) {
   // Resolve os dados cadastrais da malha identificada
   const malha = resolverMalha(briefing?.malha);
   const malhaIdentificada = malha
@@ -177,7 +177,13 @@ ${textoModelosReferencia ? `MODELOS DE REFERÊNCIA (use o estilo e vocabulário 
 ${textoModelosReferencia.substring(0, 8000)}` : ''}
 
 ESTILO DO DOCUMENTO:
-${templateHint || 'Tom formal padrão.'}`;
+${templateHint || 'Tom formal padrão.'}
+
+${usaTemplate ? `FORMATO DO OUTPUT — INSTRUÇÃO CRÍTICA:
+O documento final será montado a partir de um template DOCX com cabeçalho, endereçamento, saudação e assinatura já formatados.
+Gere APENAS os parágrafos do corpo da resposta — o conteúdo entre a saudação e o "Atenciosamente,".
+NÃO inclua: cabeçalho da carta, número do ofício, data, destinatário, saudação ("Prezada..."), "Atenciosamente,", nome do signatário, cargo nem rodapé.
+Comece diretamente com o primeiro parágrafo de resposta.` : ''}`;
 
   const pontosFormatados = pontosRespondidos
     ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   RESPOSTA DO USUÁRIO: ${item.resposta || '(não informado)'}`)
@@ -213,13 +219,19 @@ Cargo: ${cargo || '[CARGO]'}
 Data de emissão: São Paulo, ${dataHoje}
 
 INSTRUÇÕES:
-1. O PRIMEIRO PARÁGRAFO DO CORPO deve começar OBRIGATORIAMENTE com:
+${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
+   "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria, em atenção ao ${briefing?.numero || 'Ofício'}, para..."
+2. Atenda cada ponto numeradamente
+3. Para pontos sem resposta, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
+4. Encerre com "A ${malha?.sigla || 'Rumo'} permanece à disposição de Vossa Senhoria para quaisquer esclarecimentos adicionais."
+5. NÃO adicione cabeçalho, saudação, "Atenciosamente," ou assinatura — apenas os parágrafos do corpo
+6. Gere APENAS o corpo da resposta, sem comentários ou explicações adicionais` : `1. O PRIMEIRO PARÁGRAFO DO CORPO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria, em atenção ao ${briefing?.numero || 'Ofício'}, para..."
 2. Use a estrutura: referência ao ofício → abertura com identificação da empresa → atendimento numerado a cada ponto → encerramento → assinatura
 3. Para pontos sem resposta informada, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
 4. Inclua expressões protocolares como "A Rumo permanece à disposição..."
 5. Numere o ofício como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
-6. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais`;
+6. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais`}`;
 
   return callClaude(
     [{ role: 'user', content: userMessage }],
