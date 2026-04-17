@@ -50,7 +50,25 @@ async function exportarDocx(req, res, next) {
       const malha = resolverMalha(ultimaMinuta.malha);
       const fileContent = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(fileContent);
-      const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+
+      // Pré-processa o XML: remove alinhamento justificado do parágrafo {conteudo}
+      // e substitui {conteudo} por loop de parágrafos para evitar <w:br/> em texto justificado
+      let docXml = zip.files['word/document.xml'].asText();
+      docXml = docXml.replace(
+        /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{conteudo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
+        (match) => match
+          .replace(/<w:jc w:val="both"\/>/g, '<w:jc w:val="left"/>')
+          .replace('{conteudo}', '{#paragrafos}{.}{/paragrafos}')
+      );
+      zip.file('word/document.xml', docXml);
+
+      const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: false });
+
+      // Converte o conteúdo em array de parágrafos (sem markdown, sem <br/> forçado)
+      const paragrafos = conteudo
+        .split(/\n\n+/)
+        .map(p => p.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ').trim())
+        .filter(Boolean);
 
       doc.render({
         numero_oficio: gerarNumeroOficio(),
@@ -60,7 +78,7 @@ async function exportarDocx(req, res, next) {
         processo: ultimaMinuta.processo || '',
         assunto: ultimaMinuta.assunto || '',
         referencia: ultimaMinuta.referencia || '',
-        conteudo: conteudo,
+        paragrafos,
         regulada: (malha ? malha.nome : signatario) + '\n' + cargo,
         signatario: signatario,
       });
