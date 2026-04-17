@@ -11,6 +11,6 @@ const oficios = [];   // Ofícios da ANTT processados
 const modelosPermanentes = []; // DOCXs fixos de backend/templates/ (carregados na inicialização)
 
 // Última minuta gerada — usada pelos endpoints GET de export
-const ultimaMinuta = { texto: '', signatario: '', cargo: '' };
+const ultimaMinuta = { texto: '', signatario: '', cargo: '', modeloId: 'objetiva' };
 
 module.exports = { modelos, oficios, modelosPermanentes, ultimaMinuta };

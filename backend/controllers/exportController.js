@@ -13,6 +13,7 @@ const {
 } = require('docx');
 const PDFDocument = require('pdfkit');
 const { ultimaMinuta } = require('../services/store');
+const { getTemplate } = require('../services/docxTemplates');
 
 /**
  * Resolve o conteúdo da minuta a partir do body (POST) ou do store (GET)
@@ -48,11 +49,14 @@ async function exportarDocx(req, res, next) {
       });
     }
 
+    const template = getTemplate(ultimaMinuta.modeloId || 'objetiva');
+    const style = template.docxStyle;
+
     const paragrafos = conteudo.split('\n').map(
       (linha) =>
         new Paragraph({
-          children: [new TextRun({ text: linha, font: 'Calibri', size: 24 })],
-          spacing: { after: 120 },
+          children: [new TextRun({ text: linha, font: style.fonte, size: style.tamanho })],
+          spacing: { after: style.espacamentoDepois, line: style.espacamentoLinha, lineRule: 'auto' },
         })
     );
 
@@ -74,7 +78,7 @@ async function exportarDocx(req, res, next) {
             new Paragraph({ children: [new TextRun({ text: '', break: 2 })] }),
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: 'Atenciosamente,', font: 'Calibri', size: 24 })],
+              children: [new TextRun({ text: 'Atenciosamente,', font: style.fonte, size: style.tamanho })],
             }),
             new Paragraph({ children: [new TextRun({ text: '', break: 2 })] }),
             new Paragraph({
@@ -83,15 +87,15 @@ async function exportarDocx(req, res, next) {
                 new TextRun({
                   text: signatario || '[SIGNATÁRIO]',
                   bold: true,
-                  font: 'Calibri',
-                  size: 24,
+                  font: style.fonte,
+                  size: style.tamanho,
                 }),
               ],
             }),
             new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
-                new TextRun({ text: cargo || '[CARGO]', font: 'Calibri', size: 22 }),
+                new TextRun({ text: cargo || '[CARGO]', font: style.fonte, size: style.tamanho - 2 }),
               ],
             }),
           ],
@@ -127,6 +131,11 @@ async function exportarPdf(req, res, next) {
       });
     }
 
+    const pdfTemplate = getTemplate(ultimaMinuta.modeloId || 'objetiva');
+    const pdfStyle = pdfTemplate.docxStyle;
+    // Convert half-points (docx size unit) to PDF points: divide by 2
+    const pdfFontSize = Math.round(pdfStyle.tamanho / 2);
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=resposta-antt.pdf');
 
@@ -142,7 +151,7 @@ async function exportarPdf(req, res, next) {
     doc.moveDown(1.5);
 
     // Corpo da minuta
-    doc.font('Helvetica').fontSize(11);
+    doc.font('Helvetica').fontSize(pdfFontSize);
     conteudo.split('\n').forEach((linha) => {
       if (linha.trim() === '') {
         doc.moveDown(0.5);

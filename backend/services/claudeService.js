@@ -151,7 +151,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
  * @param {string} params.textoModelosReferencia - Texto concatenado dos modelos de referência
  * @returns {Promise<string>} - Texto da minuta gerada
  */
-async function gerarMinuta({ briefing, signatario, cargo, pontosRespondidos, textoModelosReferencia }) {
+async function gerarMinuta({ briefing, signatario, cargo, pontosRespondidos, textoModelosReferencia, templateHint }) {
   // Resolve os dados cadastrais da malha identificada
   const malha = resolverMalha(briefing?.malha);
   const malhaIdentificada = malha
@@ -174,7 +174,10 @@ PADRÕES OBRIGATÓRIOS:
 ENTIDADE RESPONDENTE: ${malhaIdentificada}
 
 ${textoModelosReferencia ? `MODELOS DE REFERÊNCIA (use o estilo e vocabulário destes documentos):
-${textoModelosReferencia.substring(0, 8000)}` : ''}`;
+${textoModelosReferencia.substring(0, 8000)}` : ''}
+
+ESTILO DO DOCUMENTO:
+${templateHint || 'Tom formal padrão.'}`;
 
   const pontosFormatados = pontosRespondidos
     ?.map((item, i) => `${i + 1}. PONTO: ${item.ponto}\n   RESPOSTA DO USUÁRIO: ${item.resposta || '(não informado)'}`)
