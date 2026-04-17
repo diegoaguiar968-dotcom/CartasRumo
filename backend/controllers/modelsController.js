@@ -6,7 +6,7 @@
 const { TEMPLATES } = require('../services/docxTemplates');
 
 function listarTemplates(req, res) {
-  res.json({ success: true, templates: TEMPLATES.map(({ id, nome, descricao, uso }) => ({ id, nome, descricao, uso })) });
+  res.json({ success: true, templates: TEMPLATES.filter(t => t.disponivel !== false).map(({ id, nome, descricao, uso }) => ({ id, nome, descricao, uso })) });
 }
 
 module.exports = { listarTemplates };
