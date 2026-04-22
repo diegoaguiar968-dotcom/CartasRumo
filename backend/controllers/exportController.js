@@ -1,6 +1,6 @@
 /**
  * controllers/exportController.js
- * Exportação da minuta para DOCX (via template) e PDF
+ * Exportação da minuta para DOCX (via template)
  */
 
 const fs = require('fs');
@@ -10,7 +10,6 @@ const Docxtemplater = require('docxtemplater');
 const {
   Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Packer,
 } = require('docx');
-const PDFDocument = require('pdfkit');
 const { ultimaMinuta } = require('../services/store');
 const { getTemplate } = require('../services/docxTemplates');
 const { resolverMalha } = require('../services/malhas');
@@ -138,42 +137,4 @@ async function exportarDocx(req, res, next) {
   }
 }
 
-async function exportarPdf(req, res, next) {
-  try {
-    const { conteudo } = resolverConteudo(req);
-
-    if (!conteudo) {
-      return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
-    }
-
-    const template = getTemplate(ultimaMinuta.modeloId || 'objetiva');
-    const pdfFontSize = Math.round(template.docxStyle.tamanho / 2);
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=resposta-antt.pdf');
-
-    const doc = new PDFDocument({ margin: 72, size: 'A4' });
-    doc.pipe(res);
-
-    doc.font('Helvetica-Bold').fontSize(13).text('RUMO LOGÍSTICA OPERADORA MULTIMODAL S.A.', { align: 'center' });
-    doc.moveDown(1.5);
-    doc.font('Helvetica').fontSize(pdfFontSize);
-
-    conteudo.split('\n').forEach((linha) => {
-      if (linha.trim() === '') doc.moveDown(0.5);
-      else doc.text(linha, { align: 'justify' });
-    });
-
-    const malha = resolverMalha(ultimaMinuta.malha);
-    doc.moveDown(2);
-    doc.text('Atenciosamente,', { align: 'center' });
-    doc.moveDown(2);
-    doc.font('Helvetica-Bold').text(malha ? malha.nome : 'RUMO S.A.', { align: 'center' });
-
-    doc.end();
-  } catch (err) {
-    next(err);
-  }
-}
-
-module.exports = { exportarDocx, exportarPdf };
+module.exports = { exportarDocx };

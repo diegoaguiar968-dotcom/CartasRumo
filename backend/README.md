@@ -44,7 +44,6 @@ agente-rumo-backend/
 | POST   | /api/oficio/upload    | Upload do ofício ANTT + extração via Claude AI |
 | POST   | /api/minuta/generate  | Gera a minuta de resposta via Claude AI        |
 | POST   | /api/export/docx      | Exporta minuta como .docx                      |
-| POST   | /api/export/pdf       | Exporta minuta como PDF                        |
 
 ## Setup Local
 
