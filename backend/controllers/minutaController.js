@@ -102,7 +102,7 @@ async function gerarMinutaHandler(req, res, next) {
     ultimaMinuta.signatarioAntt = nomeAntt ? `${tratamento(nomeAntt)} ${nomeAntt}` : '';
     ultimaMinuta.cargoAntt    = cargoAntt;
     ultimaMinuta.malha        = briefing?.malha || '';
-    ultimaMinuta.processo     = briefing?.numero || '';
+    ultimaMinuta.processo     = briefing?.processo || '';
     ultimaMinuta.assunto      = `Atendimento ao ${briefing?.numero || 'ofício da ANTT'} — ${briefing?.natureza || ''}`.trim();
     ultimaMinuta.referencia   = briefing?.numero || '';
 

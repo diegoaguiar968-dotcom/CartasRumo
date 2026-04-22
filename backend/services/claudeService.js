@@ -92,7 +92,8 @@ ${textoOficio.substring(0, 6000)}
 
 Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
 {
-  "numero": "número/referência do ofício (ex: OF.ANTT.123/2025) ou 'Não identificado'",
+  "numero": "número/identificação do próprio ofício (ex: OFÍCIO SEI Nº 13884/2026/SUSPI/DIR-ANTT, OF.ANTT.123/2025) ou 'Não identificado'",
+  "processo": "número do processo administrativo/SEI — formato NNNNN.NNNNNN/AAAA-NN (ex: 50505.018666/2026-59). Procure por 'Processo nº', 'SEI nº', 'Processo SEI'. Se não encontrar, retorne 'Não identificado'",
   "data": "data do ofício (ex: 15/04/2025) ou 'Não identificada'",
   "signatarioAntt": "nome e cargo do signatário da ANTT ou 'Não identificado'",
   "area": "superintendência ou área da ANTT (ex: SUFER, GEROP) ou 'Não identificada'",
@@ -108,6 +109,10 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
     "documento 1 solicitado"
   ]
 }
+
+ATENÇÃO — distinção obrigatória entre 'numero' e 'processo':
+- 'numero': é a identificação do próprio ofício (ex: "OFÍCIO SEI Nº 13884/2026/SUSPI/DIR-ANTT")
+- 'processo': é o número do processo administrativo/SEI vinculado (ex: "50505.018666/2026-59"), que segue o padrão NNNNN.NNNNNN/AAAA-NN. São sempre valores distintos.
 
 Para o campo 'malha': procure no texto referências a contratos de concessão, trechos ferroviários, estados atendidos ou razão social. Use 'rumo' para RUMO S.A. (holding), 'norte' para Malha Norte, 'paulista' para Malha Paulista, 'oeste' para Malha Oeste, 'sul' para Malha Sul, 'central' para Malha Central.
 Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.`;
@@ -128,6 +133,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
     // Retorna um briefing de fallback para não travar o frontend
     return {
       numero: 'Não identificado',
+      processo: 'Não identificado',
       data: 'Não identificada',
       signatarioAntt: 'Não identificado',
       area: 'Não identificada',
