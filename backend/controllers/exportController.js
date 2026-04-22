@@ -51,14 +51,22 @@ async function exportarDocx(req, res, next) {
       const fileContent = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(fileContent);
 
-      // Pré-processa o XML: remove alinhamento justificado do parágrafo {conteudo}
-      // e substitui {conteudo} por loop de parágrafos para evitar <w:br/> em texto justificado
+      // Pré-processa o XML:
+      // - Remove alinhamento justificado (causa espaçamento forçado entre palavras)
+      // - Transforma {conteudo} em loop de parágrafos para o paragraphLoop do docxtemplater
+      // Os delimitadores {#paragrafos} e {/paragrafos} DEVEM estar em parágrafos separados
+      // para que o paragraphLoop replique o <w:p> completo (e não apenas o run).
       let docXml = zip.files['word/document.xml'].asText();
       docXml = docXml.replace(
         /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{conteudo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
-        (match) => match
-          .replace(/<w:jc w:val="both"\/>/g, '<w:jc w:val="left"/>')
-          .replace('{conteudo}', '{#paragrafos}{.}{/paragrafos}')
+        (match) => {
+          const loopOpen  = '<w:p><w:r><w:t xml:space="preserve">{#paragrafos}</w:t></w:r></w:p>';
+          const loopClose = '<w:p><w:r><w:t xml:space="preserve">{/paragrafos}</w:t></w:r></w:p>';
+          const contentPara = match
+            .replace(/<w:jc w:val="both"\/>/g, '<w:jc w:val="left"/>')
+            .replace('{conteudo}', '{.}');
+          return loopOpen + contentPara + loopClose;
+        }
       );
       zip.file('word/document.xml', docXml);
 
