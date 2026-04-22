@@ -47,7 +47,6 @@ function tratamento(nome) {
 
 async function gerarMinutaHandler(req, res, next) {
   try {
-    const { signatario, cargo } = req.body;
     const modeloId = req.body.modeloId || 'objetiva';
     const template = getTemplate(modeloId);
 
@@ -84,7 +83,7 @@ async function gerarMinutaHandler(req, res, next) {
     const usaTemplate = !!(templatePath && fs.existsSync(templatePath));
 
     const textoRaw = await gerarMinuta({
-      briefing, signatario, cargo, pontosRespondidos,
+      briefing, pontosRespondidos,
       textoModelosReferencia, templateHint: template.claudeHint, usaTemplate,
     });
 
@@ -96,8 +95,6 @@ async function gerarMinutaHandler(req, res, next) {
 
     // Persiste no store
     ultimaMinuta.texto        = textoMinuta;
-    ultimaMinuta.signatario   = signatario || '';
-    ultimaMinuta.cargo        = cargo || '';
     ultimaMinuta.modeloId     = modeloId;
     ultimaMinuta.signatarioAntt = nomeAntt ? `${tratamento(nomeAntt)} ${nomeAntt}` : '';
     ultimaMinuta.cargoAntt    = cargoAntt;

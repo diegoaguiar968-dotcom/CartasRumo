@@ -151,13 +151,11 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
  * Gera uma minuta de resposta ao ofício com base no briefing e nas informações fornecidas pelo usuário.
  * @param {Object} params
  * @param {Object} params.briefing - Briefing extraído do ofício
- * @param {string} params.signatario - Nome do signatário da Rumo
- * @param {string} params.cargo - Cargo do signatário
  * @param {Array}  params.pontosRespondidos - Array de {ponto, resposta}
  * @param {string} params.textoModelosReferencia - Texto concatenado dos modelos de referência
  * @returns {Promise<string>} - Texto da minuta gerada
  */
-async function gerarMinuta({ briefing, signatario, cargo, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate }) {
+async function gerarMinuta({ briefing, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate }) {
   // Resolve os dados cadastrais da malha identificada
   const malha = resolverMalha(briefing?.malha);
   const malhaIdentificada = malha
@@ -217,10 +215,6 @@ ${malhaIdentificada}
 
 ═══════════ PONTOS A RESPONDER ═══════════
 ${pontosFormatados}
-
-═══════════ SIGNATÁRIO ═══════════
-Nome: ${signatario || '[NOME DO SIGNATÁRIO]'}
-Cargo: ${cargo || '[CARGO]'}
 
 Data de emissão: São Paulo, ${dataHoje}
 

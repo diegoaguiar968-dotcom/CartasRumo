@@ -17,13 +17,11 @@ const { resolverMalha } = require('../services/malhas');
 
 function resolverConteudo(req) {
   const body = req.body || {};
-  const signatario = body.signatario || ultimaMinuta.signatario || '';
-  const cargo = body.cargo || ultimaMinuta.cargo || '';
   const dadosResposta = body.dadosResposta || {};
   const conteudo =
     dadosResposta.minuta || dadosResposta.conteudo || dadosResposta.texto ||
     body.texto || body.conteudo || ultimaMinuta.texto || '';
-  return { signatario, cargo, conteudo };
+  return { conteudo };
 }
 
 function gerarNumeroOficio() {
@@ -34,7 +32,7 @@ function gerarNumeroOficio() {
 
 async function exportarDocx(req, res, next) {
   try {
-    const { signatario, cargo, conteudo } = resolverConteudo(req);
+    const { conteudo } = resolverConteudo(req);
 
     if (!conteudo) {
       return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
@@ -87,8 +85,7 @@ async function exportarDocx(req, res, next) {
         assunto: ultimaMinuta.assunto || '',
         referencia: ultimaMinuta.referencia || '',
         paragrafos,
-        regulada: (malha ? malha.nome : signatario) + '\n' + cargo,
-        signatario: signatario,
+        regulada: malha ? malha.nome : '',
       });
 
       const buffer = doc.getZip().generate({ type: 'nodebuffer' });
@@ -126,11 +123,7 @@ async function exportarDocx(req, res, next) {
           new Paragraph({ children: [new TextRun({ text: '', break: 2 })] }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: signatario || '[SIGNATÁRIO]', bold: true, font: style.fonte, size: style.tamanho })],
-          }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: cargo || '[CARGO]', font: style.fonte, size: style.tamanho - 2 })],
+            children: [new TextRun({ text: malha ? malha.nome : 'RUMO S.A.', bold: true, font: style.fonte, size: style.tamanho })],
           }),
         ],
       }],
@@ -147,7 +140,7 @@ async function exportarDocx(req, res, next) {
 
 async function exportarPdf(req, res, next) {
   try {
-    const { signatario, cargo, conteudo } = resolverConteudo(req);
+    const { conteudo } = resolverConteudo(req);
 
     if (!conteudo) {
       return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
@@ -171,11 +164,11 @@ async function exportarPdf(req, res, next) {
       else doc.text(linha, { align: 'justify' });
     });
 
+    const malha = resolverMalha(ultimaMinuta.malha);
     doc.moveDown(2);
     doc.text('Atenciosamente,', { align: 'center' });
     doc.moveDown(2);
-    doc.font('Helvetica-Bold').text(signatario || '[SIGNATÁRIO]', { align: 'center' });
-    doc.font('Helvetica').fontSize(10).text(cargo || '[CARGO]', { align: 'center' });
+    doc.font('Helvetica-Bold').text(malha ? malha.nome : 'RUMO S.A.', { align: 'center' });
 
     doc.end();
   } catch (err) {
