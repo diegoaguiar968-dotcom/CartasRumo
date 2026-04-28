@@ -293,4 +293,86 @@ Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a m
   return resposta;
 }
 
-module.exports = { callClaude, extrairBriefingOficio, gerarMinuta, refinarMinuta };
+/**
+ * Gera uma carta espontânea da Rumo dirigida à ANTT (sem ofício de entrada).
+ */
+async function gerarCartaEspontanea({ malha: malhaKey, destinatario, cargoDestinatario, area, referencia, processo, assunto, textoModelosReferencia, templateHint, usaTemplate }) {
+  const malha = resolverMalha(malhaKey);
+  const malhaIdentificada = malha
+    ? `${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}`
+    : '[ENTIDADE NÃO IDENTIFICADA — verificar manualmente]';
+
+  const aberturaObrigatoria = malha
+    ? `A ${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}, concessionária prestadora do serviço público de transporte ferroviário de cargas,`
+    : 'A [ENTIDADE DO GRUPO RUMO], concessionária prestadora do serviço público de transporte ferroviário de cargas,';
+
+  const systemPrompt = `Você é o Assistente Regulatório do grupo Rumo, especializado em redigir comunicações institucionais formais à ANTT. Você produz cartas de alta qualidade, prontas para aprovação e assinatura.
+
+PADRÕES OBRIGATÓRIOS:
+- Tom: formal técnico-jurídico, nunca coloquial
+- Tratamento: "Vossa Senhoria" para diretores/superintendentes
+- Verbos na terceira pessoa do singular
+- Linguagem: terminologia do setor ferroviário e regulatório
+- Estrutura: abertura protocolar → desenvolvimento do assunto → encerramento formal
+
+ENTIDADE REMETENTE: ${malhaIdentificada}
+
+${textoModelosReferencia ? `MODELOS DE REFERÊNCIA (use o estilo e vocabulário destes documentos):\n${textoModelosReferencia.substring(0, 8000)}` : ''}
+
+ESTILO DO DOCUMENTO:
+${templateHint || 'Tom formal padrão.'}
+
+${usaTemplate ? `FORMATO DO OUTPUT — INSTRUÇÃO CRÍTICA:
+O documento final será montado a partir de um template DOCX com cabeçalho, endereçamento, saudação e assinatura já formatados.
+Gere APENAS os parágrafos do corpo da carta — o conteúdo entre a saudação e o "Atenciosamente,".
+NÃO inclua: cabeçalho, número, data, destinatário, saudação ("Prezada..."), "Atenciosamente,", nome do signatário, cargo nem rodapé.
+Comece diretamente com o primeiro parágrafo.` : ''}`;
+
+  const refParts = [];
+  if (referencia) refParts.push(`Referência: ${referencia}`);
+  if (processo) refParts.push(`Processo SEI: ${processo}`);
+
+  const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const userMessage = `Redija uma carta formal da ${malha?.nome || '[ENTIDADE RUMO]'} dirigida à ANTT.
+
+═══════════ TIPO ═══════════
+Comunicação espontânea — a Rumo está tomando a iniciativa de comunicar algo à ANTT, SEM ter recebido ofício prévio.
+
+═══════════ DESTINATÁRIO ═══════════
+Nome: ${destinatario || '[NOME DO DESTINATÁRIO]'}
+Cargo: ${cargoDestinatario || '[CARGO]'}
+Área / Superintendência: ${area || '[ÁREA]'}
+
+═══════════ ENTIDADE REMETENTE ═══════════
+${malhaIdentificada}
+${refParts.length ? '\n═══════════ REFERÊNCIAS ═══════════\n' + refParts.join('\n') : ''}
+
+═══════════ ASSUNTO / CONTEÚDO A COMUNICAR ═══════════
+${assunto}
+
+Data de emissão: São Paulo, ${dataHoje}
+
+INSTRUÇÕES:
+${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
+   "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria para comunicar..."
+2. Desenvolva o assunto de forma clara, formal e tecnicamente fundamentada
+3. Estruture com parágrafos lógicos; use numeração se houver múltiplos pontos
+4. Encerre com "A ${malha?.sigla || 'Rumo'} permanece à disposição de Vossa Senhoria para quaisquer esclarecimentos adicionais."
+5. NÃO adicione cabeçalho, saudação, "Atenciosamente," ou assinatura — apenas os parágrafos do corpo
+6. Gere APENAS o corpo da carta, sem comentários ou explicações adicionais` : `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
+   "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria para comunicar..."
+2. Desenvolva o assunto de forma clara, formal e tecnicamente fundamentada
+3. Estruture com parágrafos lógicos; use numeração se houver múltiplos pontos
+4. Inclua expressões protocolares como "A Rumo permanece à disposição..."
+5. Numere a carta como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
+6. Gere APENAS o texto da carta, sem comentários ou explicações adicionais`}`;
+
+  return callClaude(
+    [{ role: 'user', content: userMessage }],
+    systemPrompt,
+    3000
+  );
+}
+
+module.exports = { callClaude, extrairBriefingOficio, gerarMinuta, refinarMinuta, gerarCartaEspontanea };

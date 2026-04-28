@@ -5,7 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gerarMinuta, refinarMinuta } = require('../services/claudeService');
+const { gerarMinuta, refinarMinuta, gerarCartaEspontanea } = require('../services/claudeService');
 const { getTemplate } = require('../services/docxTemplates');
 const { modelos, oficios, modelosPermanentes, ultimaMinuta } = require('../services/store');
 
@@ -136,4 +136,49 @@ async function refinarMinutaHandler(req, res, next) {
   }
 }
 
-module.exports = { gerarMinutaHandler, refinarMinutaHandler };
+async function gerarCartaEspontaneaHandler(req, res, next) {
+  try {
+    const { modeloId, destinatario, cargoDestinatario, area, malha: malhaKey, referencia, processo, assunto } = req.body;
+
+    if (!assunto?.trim()) {
+      return res.status(400).json({ success: false, message: 'O campo assunto é obrigatório.' });
+    }
+    if (!malhaKey) {
+      return res.status(400).json({ success: false, message: 'Selecione a malha Rumo respondente.' });
+    }
+
+    const template = getTemplate(modeloId || 'documentacao');
+    const templatePath = template.arquivo ? path.join(__dirname, '../templates', template.arquivo) : null;
+    const usaTemplate = !!(templatePath && fs.existsSync(templatePath));
+
+    const textoModelosReferencia = [...modelosPermanentes, ...modelos]
+      .map(m => m.textoExtraido).join('\n\n---\n\n').substring(0, 8000);
+
+    const textoRaw = await gerarCartaEspontanea({
+      malha: malhaKey, destinatario, cargoDestinatario, area,
+      referencia: referencia?.trim() || '',
+      processo: processo?.trim() || '',
+      assunto,
+      textoModelosReferencia,
+      templateHint: template.claudeHint,
+      usaTemplate,
+    });
+
+    const textoMinuta = limparMarkdown(textoRaw);
+
+    ultimaMinuta.texto         = textoMinuta;
+    ultimaMinuta.modeloId      = modeloId || 'documentacao';
+    ultimaMinuta.signatarioAntt = destinatario ? `${tratamento(destinatario)} ${destinatario}` : '';
+    ultimaMinuta.cargoAntt     = cargoDestinatario || '';
+    ultimaMinuta.malha         = malhaKey || '';
+    ultimaMinuta.processo      = processo?.trim() || '';
+    ultimaMinuta.assunto       = assunto.substring(0, 100);
+    ultimaMinuta.referencia    = referencia?.trim() || '';
+
+    res.json({ success: true, minuta: textoMinuta, texto: textoMinuta });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { gerarMinutaHandler, refinarMinutaHandler, gerarCartaEspontaneaHandler };

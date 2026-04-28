@@ -54,17 +54,37 @@ async function exportarDocx(req, res, next) {
       // Os delimitadores {#paragrafos} e {/paragrafos} DEVEM estar em parágrafos separados
       // para que o paragraphLoop replique o <w:p> completo (e não apenas o run).
       let docXml = zip.files['word/document.xml'].asText();
+
+      // {conteudo} → loop de parágrafos (paragraphLoop replica <w:p> por item)
       docXml = docXml.replace(
         /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{conteudo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
         (match) => {
-          const loopOpen  = '<w:p><w:r><w:t xml:space="preserve">{#paragrafos}</w:t></w:r></w:p>';
-          const loopClose = '<w:p><w:r><w:t xml:space="preserve">{/paragrafos}</w:t></w:r></w:p>';
-          const contentPara = match
-            .replace(/<w:jc w:val="both"\/>/g, '<w:jc w:val="left"/>')
-            .replace('{conteudo}', '{.}');
-          return loopOpen + contentPara + loopClose;
+          const open  = '<w:p><w:r><w:t xml:space="preserve">{#paragrafos}</w:t></w:r></w:p>';
+          const close = '<w:p><w:r><w:t xml:space="preserve">{/paragrafos}</w:t></w:r></w:p>';
+          return open + match.replace(/<w:jc w:val="both"\/>/g, '<w:jc w:val="left"/>').replace('{conteudo}', '{.}') + close;
         }
       );
+
+      // {processo} → parágrafo omitido quando vazio
+      docXml = docXml.replace(
+        /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{processo\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
+        (match) => {
+          const open  = '<w:p><w:r><w:t xml:space="preserve">{#processoItems}</w:t></w:r></w:p>';
+          const close = '<w:p><w:r><w:t xml:space="preserve">{/processoItems}</w:t></w:r></w:p>';
+          return open + match + close;
+        }
+      );
+
+      // {referencia} → parágrafo omitido quando vazio
+      docXml = docXml.replace(
+        /(<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*?\{referencia\}(?:(?!<\/w:p>)[\s\S])*?<\/w:p>)/,
+        (match) => {
+          const open  = '<w:p><w:r><w:t xml:space="preserve">{#referenciaItems}</w:t></w:r></w:p>';
+          const close = '<w:p><w:r><w:t xml:space="preserve">{/referenciaItems}</w:t></w:r></w:p>';
+          return open + match + close;
+        }
+      );
+
       zip.file('word/document.xml', docXml);
 
       const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: false });
@@ -80,9 +100,9 @@ async function exportarDocx(req, res, next) {
         data: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
         destinatario: ultimaMinuta.signatarioAntt || '',
         cargo: ultimaMinuta.cargoAntt || '',
-        processo: ultimaMinuta.processo || '',
+        processoItems:   ultimaMinuta.processo  ? [{ processo:  ultimaMinuta.processo  }] : [],
+        referenciaItems: ultimaMinuta.referencia ? [{ referencia: ultimaMinuta.referencia }] : [],
         assunto: ultimaMinuta.assunto || '',
-        referencia: ultimaMinuta.referencia || '',
         paragrafos,
         regulada: malha ? malha.nome : '',
       });
