@@ -223,13 +223,13 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria, em atenção ao ${briefing?.numero || 'Ofício'}, para..."
 2. Atenda cada ponto numeradamente
 3. Para pontos sem resposta, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
-4. Encerre com "A ${malha?.sigla || 'Rumo'} permanece à disposição de Vossa Senhoria para quaisquer esclarecimentos adicionais."
+4. O ÚLTIMO PARÁGRAFO deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. NÃO adicione cabeçalho, saudação, "Atenciosamente," ou assinatura — apenas os parágrafos do corpo
 6. Gere APENAS o corpo da resposta, sem comentários ou explicações adicionais` : `1. O PRIMEIRO PARÁGRAFO DO CORPO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria, em atenção ao ${briefing?.numero || 'Ofício'}, para..."
 2. Use a estrutura: referência ao ofício → abertura com identificação da empresa → atendimento numerado a cada ponto → encerramento → assinatura
 3. Para pontos sem resposta informada, escreva "[AGUARDANDO INFORMAÇÃO INTERNA]"
-4. Inclua expressões protocolares como "A Rumo permanece à disposição..."
+4. O parágrafo antes de "Atenciosamente," deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. Numere o ofício como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
 6. Gere APENAS o texto da minuta, sem comentários ou explicações adicionais`}`;
 
@@ -264,6 +264,7 @@ PADRÕES OBRIGATÓRIOS:
 - Retornar SEMPRE o texto completo atualizado, nunca apenas um trecho
 - NUNCA adicione títulos, prefixos ("Minuta Refinada:", "Minuta:") ou comentários antes do texto
 - Comece diretamente com o primeiro parágrafo da minuta
+- O ÚLTIMO PARÁGRAFO do corpo deve ser SEMPRE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais." — preserve-o em qualquer refinamento, salvo instrução explícita do usuário para alterá-lo.
 
 Quando o usuário pedir uma modificação, aplique-a com precisão e retorne a minuta completa e reformulada.
 Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a minuta atualizada (mesmo que sem mudanças).`;
@@ -358,13 +359,13 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria para comunicar..."
 2. Desenvolva o assunto de forma clara, formal e tecnicamente fundamentada
 3. Estruture com parágrafos lógicos; use numeração se houver múltiplos pontos
-4. Encerre com "A ${malha?.sigla || 'Rumo'} permanece à disposição de Vossa Senhoria para quaisquer esclarecimentos adicionais."
+4. O ÚLTIMO PARÁGRAFO deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. NÃO adicione cabeçalho, saudação, "Atenciosamente," ou assinatura — apenas os parágrafos do corpo
 6. Gere APENAS o corpo da carta, sem comentários ou explicações adicionais` : `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
    "${aberturaObrigatoria} vem, respeitosamente, à presença de Vossa Senhoria para comunicar..."
 2. Desenvolva o assunto de forma clara, formal e tecnicamente fundamentada
 3. Estruture com parágrafos lógicos; use numeração se houver múltiplos pontos
-4. Inclua expressões protocolares como "A Rumo permanece à disposição..."
+4. O parágrafo antes de "Atenciosamente," deve ser OBRIGATORIAMENTE: "Sendo o que nos cumpria no momento, permanecemos à disposição para quaisquer esclarecimentos ou informações adicionais."
 5. Numere a carta como OF.RUMO.DIR.REG.XXX/${new Date().getFullYear()}
 6. Gere APENAS o texto da carta, sem comentários ou explicações adicionais`}`;
 
