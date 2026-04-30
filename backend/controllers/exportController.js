@@ -23,15 +23,10 @@ function resolverConteudo(req) {
   return { conteudo };
 }
 
-function gerarNumeroOficio() {
-  const ano = new Date().getFullYear();
-  const seq = String(Date.now()).slice(-3);
-  return `${seq}/${ano}`;
-}
-
 async function exportarDocx(req, res, next) {
   try {
     const { conteudo } = resolverConteudo(req);
+    const numeroOficio = req.body?.numero_oficio?.trim() || '';
 
     if (!conteudo) {
       return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
@@ -96,7 +91,7 @@ async function exportarDocx(req, res, next) {
         .filter(Boolean);
 
       doc.render({
-        numero_oficio: gerarNumeroOficio(),
+        numero_oficio: numeroOficio,
         data: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
         destinatario: ultimaMinuta.signatarioAntt || '',
         cargo: ultimaMinuta.cargoAntt || '',
