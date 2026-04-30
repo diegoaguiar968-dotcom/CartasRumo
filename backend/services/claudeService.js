@@ -174,6 +174,8 @@ PADRÕES OBRIGATÓRIOS:
 - Verbos na terceira pessoa do singular
 - Linguagem: terminologia do setor ferroviário e regulatório
 - Estrutura: cabeçalho de referência → abertura protocolar → atendimento aos pontos → encerramento formal
+- Normas: NÃO citar normas que regulam procedimentos internos da ANTT (ex: regras de dilação de prazo no SEI, ritos processuais). Citar apenas normas diretamente relevantes ao mérito da questão respondida.
+- Objetividade: Formular pedidos e informações de forma direta e concisa. Evitar parênteses explicativos longos com referências documentais. Exemplo correto: "requerer nova dilação de prazo de 30 (trinta) dias para o cumprimento da obrigação".
 
 ENTIDADE RESPONDENTE: ${malhaIdentificada}
 
@@ -261,6 +263,8 @@ PADRÕES OBRIGATÓRIOS:
 - Tom: formal técnico-jurídico, nunca coloquial
 - Tratamento: "Vossa Senhoria" para diretores/superintendentes
 - Verbos na terceira pessoa do singular
+- Normas: NÃO citar normas que regulam procedimentos internos da ANTT (ex: regras de dilação de prazo no SEI, ritos processuais). Citar apenas normas diretamente relevantes ao mérito da questão respondida.
+- Objetividade: Formular pedidos e informações de forma direta e concisa. Evitar parênteses explicativos longos com referências documentais. Exemplo correto: "requerer nova dilação de prazo de 30 (trinta) dias para o cumprimento da obrigação".
 - Retornar SEMPRE o texto completo atualizado, nunca apenas um trecho
 - NUNCA adicione títulos, prefixos ("Minuta Refinada:", "Minuta:") ou comentários antes do texto
 - Comece diretamente com o primeiro parágrafo da minuta
@@ -315,6 +319,8 @@ PADRÕES OBRIGATÓRIOS:
 - Verbos na terceira pessoa do singular
 - Linguagem: terminologia do setor ferroviário e regulatório
 - Estrutura: abertura protocolar → desenvolvimento do assunto → encerramento formal
+- Normas: NÃO citar normas que regulam procedimentos internos da ANTT (ex: regras de dilação de prazo no SEI, ritos processuais). Citar apenas normas diretamente relevantes ao mérito da questão respondida.
+- Objetividade: Formular pedidos e informações de forma direta e concisa. Evitar parênteses explicativos longos com referências documentais. Exemplo correto: "requerer nova dilação de prazo de 30 (trinta) dias para o cumprimento da obrigação".
 
 ENTIDADE REMETENTE: ${malhaIdentificada}
 
