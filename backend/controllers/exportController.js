@@ -23,6 +23,20 @@ function resolverConteudo(req) {
   return { conteudo };
 }
 
+// Infere saudação pelo prefixo "Sr."/"Sra." já atribuído ao signatário,
+// com fallback na terminação do cargo.
+function inferirSaudacao(signatarioAntt, cargoAntt) {
+  if (/^Sra\./i.test((signatarioAntt || '').trim())) return 'Prezada Senhora';
+  if (/^Sr\./i.test((signatarioAntt || '').trim())) return 'Prezado Senhor';
+
+  // Fallback: primeira palavra do cargo
+  const primeiraWordo = (cargoAntt || '').split(/[\s/,-]/)[0].toLowerCase();
+  const neutros = /nte$|ste$|ife$|efe$|ista$/;
+  if (primeiraWordo.endsWith('a') && !neutros.test(primeiraWordo)) return 'Prezada Senhora';
+
+  return 'Prezado Senhor';
+}
+
 async function exportarDocx(req, res, next) {
   try {
     const { conteudo } = resolverConteudo(req);
@@ -80,6 +94,12 @@ async function exportarDocx(req, res, next) {
         }
       );
 
+      // Saudação hardcoded no template ("Prezada Senhora,") → substituir por {saudacao}
+      docXml = docXml.replace(
+        '<w:r><w:t>Prezada</w:t></w:r><w:r w:rsidR="00B66443"><w:t xml:space="preserve"> </w:t></w:r><w:r w:rsidR="00FC1687"><w:t>Senhor</w:t></w:r><w:r><w:t>a</w:t></w:r><w:r w:rsidR="00B66443"><w:t>,</w:t></w:r>',
+        '<w:r><w:t>{saudacao}</w:t></w:r>'
+      );
+
       zip.file('word/document.xml', docXml);
 
       const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: false });
@@ -90,11 +110,14 @@ async function exportarDocx(req, res, next) {
         .map(p => p.replace(/\s{2,}/g, ' ').trim())
         .filter(Boolean);
 
+      const saudacao = inferirSaudacao(ultimaMinuta.signatarioAntt, ultimaMinuta.cargoAntt);
+
       doc.render({
         numero_oficio: numeroOficio,
         data: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
         destinatario: ultimaMinuta.signatarioAntt || '',
         cargo: ultimaMinuta.cargoAntt || '',
+        saudacao,
         processoItems:   ultimaMinuta.processo  ? [{ processo:  ultimaMinuta.processo  }] : [],
         referenciaItems: ultimaMinuta.referencia ? [{ referencia: ultimaMinuta.referencia }] : [],
         assunto: ultimaMinuta.assunto || '',
