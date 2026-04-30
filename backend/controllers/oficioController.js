@@ -5,7 +5,7 @@
 
 const { extrairTextoPDF } = require('../services/pdfService');
 const { extrairBriefingOficio } = require('../services/claudeService');
-const { oficios } = require('../services/store');
+const { oficios, documentosComplementares } = require('../services/store');
 
 async function uploadOficio(req, res, next) {
   try {
@@ -18,6 +18,9 @@ async function uploadOficio(req, res, next) {
 
     console.log('[Ofício] Enviando para Claude extrair briefing...');
     const briefing = await extrairBriefingOficio(textoOficio);
+
+    // Novo ofício: limpa documentos complementares da sessão anterior
+    documentosComplementares.splice(0);
 
     // Armazena para uso posterior na geração da minuta
     const oficio = {
@@ -48,4 +51,33 @@ async function uploadOficio(req, res, next) {
   }
 }
 
-module.exports = { uploadOficio };
+async function uploadComplementar(req, res, next) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado.' });
+    }
+
+    const texto = await extrairTextoPDF(req.file.path);
+    const doc = {
+      id: Date.now(),
+      nome: req.file.originalname,
+      texto: texto.substring(0, 8000), // limita contexto por documento
+    };
+    documentosComplementares.push(doc);
+
+    console.log(`[Complementar] Documento adicionado: ${doc.nome} (${documentosComplementares.length} total)`);
+    res.json({ success: true, id: doc.id, nome: doc.nome });
+  } catch (err) {
+    next(err);
+  }
+}
+
+function removeComplementar(req, res) {
+  const id = parseInt(req.params.id, 10);
+  const idx = documentosComplementares.findIndex(d => d.id === id);
+  if (idx === -1) return res.status(404).json({ success: false, message: 'Documento não encontrado.' });
+  documentosComplementares.splice(idx, 1);
+  res.json({ success: true });
+}
+
+module.exports = { uploadOficio, uploadComplementar, removeComplementar };

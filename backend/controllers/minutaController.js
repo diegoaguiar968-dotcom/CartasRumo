@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { gerarMinuta, refinarMinuta, gerarCartaEspontanea } = require('../services/claudeService');
 const { getTemplate } = require('../services/docxTemplates');
-const { modelos, oficios, modelosPermanentes, ultimaMinuta } = require('../services/store');
+const { modelos, oficios, modelosPermanentes, documentosComplementares, ultimaMinuta } = require('../services/store');
 
 // Remove markdown artifacts e prefixos indesejados gerados pela IA
 function limparMarkdown(texto) {
@@ -85,6 +85,7 @@ async function gerarMinutaHandler(req, res, next) {
     const textoRaw = await gerarMinuta({
       briefing, pontosRespondidos,
       textoModelosReferencia, templateHint: template.claudeHint, usaTemplate,
+      contextosAdicionais: documentosComplementares.length ? [...documentosComplementares] : undefined,
     });
 
     const textoMinuta = limparMarkdown(textoRaw);
@@ -162,6 +163,7 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
       textoModelosReferencia,
       templateHint: template.claudeHint,
       usaTemplate,
+      contextosAdicionais: documentosComplementares.length ? [...documentosComplementares] : undefined,
     });
 
     const textoMinuta = limparMarkdown(textoRaw);

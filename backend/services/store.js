@@ -9,6 +9,7 @@
 const modelos = [];   // PDFs/DOCXs enviados pelo usuário (limite: 5)
 const oficios = [];   // Ofícios da ANTT processados
 const modelosPermanentes = []; // DOCXs fixos de backend/templates/ (carregados na inicialização)
+const documentosComplementares = []; // Documentos relacionados ao ofício (nota técnica, resolução, etc.)
 
 // Última minuta gerada — usada pelos endpoints GET de export
 const ultimaMinuta = {
@@ -16,4 +17,4 @@ const ultimaMinuta = {
   signatarioAntt: '', cargoAntt: '', processo: '', assunto: '', referencia: '', malha: '',
 };
 
-module.exports = { modelos, oficios, modelosPermanentes, ultimaMinuta };
+module.exports = { modelos, oficios, modelosPermanentes, documentosComplementares, ultimaMinuta };

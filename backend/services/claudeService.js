@@ -155,7 +155,7 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
  * @param {string} params.textoModelosReferencia - Texto concatenado dos modelos de referência
  * @returns {Promise<string>} - Texto da minuta gerada
  */
-async function gerarMinuta({ briefing, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate }) {
+async function gerarMinuta({ briefing, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate, contextosAdicionais }) {
   // Resolve os dados cadastrais da malha identificada
   const malha = resolverMalha(briefing?.malha);
   const malhaIdentificada = malha
@@ -217,6 +217,11 @@ ${malhaIdentificada}
 
 ═══════════ PONTOS A RESPONDER ═══════════
 ${pontosFormatados}
+${contextosAdicionais?.length ? `
+═══════════ DOCUMENTOS COMPLEMENTARES (apenas contexto) ═══════════
+Os documentos abaixo acompanham o ofício. Use-os para enriquecer o contexto e fundamentar afirmações quando relevante. NÃO responda ponto a ponto nem liste seus itens individualmente.
+
+${contextosAdicionais.map(d => `[${d.nome}]\n${d.texto}`).join('\n\n---\n\n')}` : ''}
 
 Data de emissão: São Paulo, ${dataHoje}
 
@@ -301,7 +306,7 @@ Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a m
 /**
  * Gera uma carta espontânea da Rumo dirigida à ANTT (sem ofício de entrada).
  */
-async function gerarCartaEspontanea({ malha: malhaKey, destinatario, cargoDestinatario, area, referencia, processo, assunto, textoModelosReferencia, templateHint, usaTemplate }) {
+async function gerarCartaEspontanea({ malha: malhaKey, destinatario, cargoDestinatario, area, referencia, processo, assunto, textoModelosReferencia, templateHint, usaTemplate, contextosAdicionais }) {
   const malha = resolverMalha(malhaKey);
   const malhaIdentificada = malha
     ? `${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}`
@@ -357,6 +362,11 @@ ${refParts.length ? '\n═══════════ REFERÊNCIAS ═══�
 
 ═══════════ ASSUNTO / CONTEÚDO A COMUNICAR ═══════════
 ${assunto}
+${contextosAdicionais?.length ? `
+═══════════ DOCUMENTOS COMPLEMENTARES (apenas contexto) ═══════════
+Os documentos abaixo acompanham esta carta. Use-os para enriquecer o contexto e fundamentar afirmações quando relevante. NÃO responda ponto a ponto nem liste seus itens individualmente.
+
+${contextosAdicionais.map(d => `[${d.nome}]\n${d.texto}`).join('\n\n---\n\n')}` : ''}
 
 Data de emissão: São Paulo, ${dataHoje}
 
