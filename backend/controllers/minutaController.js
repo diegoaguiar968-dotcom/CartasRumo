@@ -113,6 +113,15 @@ async function gerarMinutaHandler(req, res, next) {
       documento: textoMinuta,
       resposta: textoMinuta,
       content: textoMinuta,
+      meta: {
+        signatarioAntt: ultimaMinuta.signatarioAntt,
+        cargoAntt:      ultimaMinuta.cargoAntt,
+        malha:          ultimaMinuta.malha,
+        assunto:        ultimaMinuta.assunto,
+        processo:       ultimaMinuta.processo,
+        referencia:     ultimaMinuta.referencia,
+        modeloId:       ultimaMinuta.modeloId,
+      },
     });
   } catch (err) {
     next(err);
@@ -177,7 +186,20 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
     ultimaMinuta.assunto       = assunto.substring(0, 100);
     ultimaMinuta.referencia    = referencia?.trim() || '';
 
-    res.json({ success: true, minuta: textoMinuta, texto: textoMinuta });
+    res.json({
+      success: true,
+      minuta: textoMinuta,
+      texto: textoMinuta,
+      meta: {
+        signatarioAntt: ultimaMinuta.signatarioAntt,
+        cargoAntt:      ultimaMinuta.cargoAntt,
+        malha:          ultimaMinuta.malha,
+        assunto:        ultimaMinuta.assunto,
+        processo:       ultimaMinuta.processo,
+        referencia:     ultimaMinuta.referencia,
+        modeloId:       ultimaMinuta.modeloId,
+      },
+    });
   } catch (err) {
     next(err);
   }

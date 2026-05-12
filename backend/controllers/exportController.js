@@ -37,23 +37,54 @@ function inferirSaudacao(signatarioAntt, cargoAntt) {
   return 'Prezado Senhor';
 }
 
+// Gera nome do arquivo a partir do número da carta e assunto
+function gerarNomeArquivo(numeroOficio, assunto) {
+  const sanitize = (s) => (s || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 80);
+
+  // Parseia OF.RUMO.DIR.REG.001/2025 → seq=001, gerencia=DIRREG, ano=2025
+  const parts = (numeroOficio || '').split('.');
+  const lastPart = parts[parts.length - 1] || '';
+  const [seq, ano] = lastPart.split('/');
+  const gerencia = parts.slice(2, parts.length - 1).join('') || 'RUMO';
+  const seqNum = (seq || '').replace(/\D/g, '').padStart(4, '0') || '0000';
+  const anoFinal = ano || new Date().getFullYear();
+  const assuntoSanitized = sanitize(assunto) || 'Carta';
+
+  return `${seqNum} - ${gerencia} - ${anoFinal} - ${assuntoSanitized}.docx`;
+}
+
 async function exportarDocx(req, res, next) {
   try {
     const { conteudo } = resolverConteudo(req);
     const numeroOficio = req.body?.numero_oficio?.trim() || '';
 
+    // Metadados enviados pelo frontend — fallback para o store em memória
+    const meta = req.body?.meta || {};
+    const signatarioAntt = meta.signatarioAntt ?? ultimaMinuta.signatarioAntt ?? '';
+    const cargoAntt      = meta.cargoAntt      ?? ultimaMinuta.cargoAntt      ?? '';
+    const malhaKey       = meta.malha          ?? ultimaMinuta.malha          ?? '';
+    const assunto        = meta.assunto        ?? ultimaMinuta.assunto        ?? '';
+    const processo       = meta.processo       ?? ultimaMinuta.processo       ?? '';
+    const referencia     = meta.referencia     ?? ultimaMinuta.referencia     ?? '';
+    const modeloId       = meta.modeloId       ?? ultimaMinuta.modeloId       ?? 'objetiva';
+
     if (!conteudo) {
       return res.status(400).json({ success: false, message: 'Nenhuma minuta disponível. Gere a minuta primeiro.' });
     }
 
-    const template = getTemplate(ultimaMinuta.modeloId || 'objetiva');
+    const template = getTemplate(modeloId);
     const templatePath = template.arquivo
       ? path.join(__dirname, '../templates', template.arquivo)
       : null;
 
     if (templatePath && fs.existsSync(templatePath)) {
       // ── Exportação via template DOCX com docxtemplater ──
-      const malha = resolverMalha(ultimaMinuta.malha);
+      const malha = resolverMalha(malhaKey);
       const fileContent = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(fileContent);
 
@@ -70,7 +101,7 @@ async function exportarDocx(req, res, next) {
         (match) => {
           const open  = '<w:p><w:r><w:t xml:space="preserve">{#paragrafos}</w:t></w:r></w:p>';
           const close = '<w:p><w:r><w:t xml:space="preserve">{/paragrafos}</w:t></w:r></w:p>';
-          return open + match.replace(/<w:jc w:val="both"\/>/g, '<w:jc w:val="left"/>').replace('{conteudo}', '{.}') + close;
+          return open + match.replace('{conteudo}', '{.}') + close;
         }
       );
 
@@ -110,24 +141,25 @@ async function exportarDocx(req, res, next) {
         .map(p => p.replace(/\s{2,}/g, ' ').trim())
         .filter(Boolean);
 
-      const saudacao = inferirSaudacao(ultimaMinuta.signatarioAntt, ultimaMinuta.cargoAntt);
+      const saudacao = inferirSaudacao(signatarioAntt, cargoAntt);
 
       doc.render({
         numero_oficio: numeroOficio,
         data: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
-        destinatario: ultimaMinuta.signatarioAntt || '',
-        cargo: ultimaMinuta.cargoAntt || '',
+        destinatario: signatarioAntt,
+        cargo: cargoAntt,
         saudacao,
-        processoItems:   ultimaMinuta.processo  ? [{ processo:  ultimaMinuta.processo  }] : [],
-        referenciaItems: ultimaMinuta.referencia ? [{ referencia: ultimaMinuta.referencia }] : [],
-        assunto: ultimaMinuta.assunto || '',
+        processoItems:   processo  ? [{ processo  }] : [],
+        referenciaItems: referencia ? [{ referencia }] : [],
+        assunto,
         paragrafos,
         regulada: malha ? malha.nome : '',
       });
 
       const buffer = doc.getZip().generate({ type: 'nodebuffer' });
+      const nomeArquivo = gerarNomeArquivo(numeroOficio, assunto);
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', 'attachment; filename=resposta-antt.docx');
+      res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
       return res.send(buffer);
     }
 
