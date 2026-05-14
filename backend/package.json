@@ -1,7 +1,7 @@
 {
-  "name": "agente-rumo-backend",
+  "name": "arca-backend",
   "version": "2.0.0",
-  "description": "Backend para Agente Rumo — Respostas à ANTT com IA real (Claude)",
+  "description": "Backend para ARCA — Assistente de Redação de Cartas para ANTT",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

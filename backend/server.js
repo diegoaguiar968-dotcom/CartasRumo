@@ -1,5 +1,5 @@
 /**
- * Agente Rumo — Backend
+ * ARCA — Assistente de Redação de Cartas para ANTT
  * Ponto de entrada principal da aplicação
  */
 
@@ -37,7 +37,7 @@ app.get('/api/status', (req, res) => {
   res.json({
     success: true,
     status: 'ok',
-    message: 'Agente Rumo — Backend rodando!',
+    message: 'ARCA — Backend rodando!',
     version: '2.0.0',
     ai: process.env.ANTHROPIC_API_KEY ? 'conectada' : 'desconectada (configure ANTHROPIC_API_KEY)',
   });
@@ -67,7 +67,7 @@ async function iniciar() {
 
   app.listen(PORT, () => {
     console.log('═'.repeat(50));
-    console.log('Agente Rumo — Backend v2.0');
+    console.log('ARCA — Backend v2.0');
     console.log('═'.repeat(50));
     console.log(`Porta: ${PORT}`);
     console.log(`Claude AI: ${process.env.ANTHROPIC_API_KEY ? 'configurada' : 'faltando ANTHROPIC_API_KEY'}`);
