@@ -5,7 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { gerarMinuta, refinarMinuta, gerarCartaEspontanea } = require('../services/claudeService');
+const { gerarMinuta, refinarMinuta, gerarCartaEspontanea, gerarAssuntoCurto } = require('../services/claudeService');
 const { getTemplate } = require('../services/docxTemplates');
 const { modelos, oficios, modelosPermanentes, documentosComplementares, ultimaMinuta } = require('../services/store');
 
@@ -101,7 +101,7 @@ async function gerarMinutaHandler(req, res, next) {
     ultimaMinuta.cargoAntt    = cargoAntt;
     ultimaMinuta.malha        = briefing?.malha || '';
     ultimaMinuta.processo     = briefing?.processo || '';
-    ultimaMinuta.assunto      = `Atendimento ao ${briefing?.numero || 'ofício da ANTT'} — ${briefing?.natureza || ''}`.trim();
+    ultimaMinuta.assunto      = briefing?.assunto || `Atendimento ao ${briefing?.numero || 'ofício da ANTT'}`;
     ultimaMinuta.referencia   = briefing?.numero || '';
 
     res.json({
@@ -177,13 +177,17 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
 
     const textoMinuta = limparMarkdown(textoRaw);
 
+    const { resolverMalhas, gerarTextoMalhas } = require('../services/malhas');
+    const textoMalhas = gerarTextoMalhas(resolverMalhas(malhaKey));
+    const assuntoCurto = await gerarAssuntoCurto(assunto, textoMalhas?.nomesResumidos || '');
+
     ultimaMinuta.texto         = textoMinuta;
     ultimaMinuta.modeloId      = modeloId || 'documentacao';
     ultimaMinuta.signatarioAntt = destinatario ? `${tratamento(destinatario)} ${destinatario}` : '';
     ultimaMinuta.cargoAntt     = cargoDestinatario || '';
     ultimaMinuta.malha         = malhaKey || '';
     ultimaMinuta.processo      = processo?.trim() || '';
-    ultimaMinuta.assunto       = assunto.substring(0, 100);
+    ultimaMinuta.assunto       = assuntoCurto;
     ultimaMinuta.referencia    = referencia?.trim() || '';
 
     res.json({

@@ -101,6 +101,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "natureza": "tipo da solicitação (ex: Requerimento de Informações, Solicitação de Documentos) ou 'Não identificada'",
   "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
   "malha": "quais entidades do grupo Rumo são destinatárias ou mencionadas no ofício — responda com uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte' para múltiplas. Use 'não identificada' se nenhuma for identificada.",
+  "assunto": "assunto conciso (máx 80 chars) no formato: [Tipo de Ação] - [Programa/Referência] - [Entidade(s)]. Exemplos: 'Dilação de Prazo - COE - RMP', 'Envio de Documentos - PSI - RMP', 'Informações sobre Acidente km 123'. Sem ponto final.",
   "pontos": [
     "ponto 1 a ser respondido",
     "ponto 2 a ser respondido"
@@ -178,6 +179,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "natureza": "tipo da solicitação (ex: Requerimento de Informações, Solicitação de Documentos) ou 'Não identificada'",
   "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
   "malha": "quais entidades do grupo Rumo são destinatárias — uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte'. Use 'não identificada' se nenhuma identificada.",
+  "assunto": "assunto conciso (máx 80 chars) no formato: [Tipo de Ação] - [Programa/Referência] - [Entidade(s)]. Exemplos: 'Dilação de Prazo - COE - RMP', 'Envio de Documentos - PSI - RMP', 'Informações sobre Acidente km 123'. Sem ponto final.",
   "pontos": ["ponto 1 a ser respondido", "ponto 2 a ser respondido"],
   "documentosRequisitados": ["documento 1 solicitado"]
 }
@@ -485,4 +487,20 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
   );
 }
 
-module.exports = { callClaude, extrairBriefingOficio, extrairBriefingOficioPDF, gerarMinuta, refinarMinuta, gerarCartaEspontanea };
+/**
+ * Gera um assunto conciso para a carta a partir de uma descrição longa e o nome das entidades.
+ */
+async function gerarAssuntoCurto(descricao, entidade) {
+  const systemPrompt = `Você cria assuntos concisos de cartas formais no setor ferroviário/regulatório.
+Responda APENAS com o texto do assunto — sem ponto final, sem aspas, sem explicações adicionais.
+Formato preferencial: [Ação ou Tipo] - [Programa/Referência/Trecho] - [Entidade(s)]
+Máximo 80 caracteres.
+Exemplos: "Dilação de Prazo - COE - RMP", "Envio dos Documentos PSI - RMP", "Cisão de Trecho Jundiaí-Campinas"`;
+
+  const userMessage = `Crie um assunto conciso para uma carta formal com base nesta descrição:\n${descricao.substring(0, 600)}${entidade ? `\nEntidade(s) remetente(s): ${entidade}` : ''}`;
+
+  const resultado = await callClaude([{ role: 'user', content: userMessage }], systemPrompt, 100);
+  return resultado.replace(/^["']|["']$/g, '').replace(/\.$/, '').trim();
+}
+
+module.exports = { callClaude, extrairBriefingOficio, extrairBriefingOficioPDF, gerarMinuta, refinarMinuta, gerarCartaEspontanea, gerarAssuntoCurto };
