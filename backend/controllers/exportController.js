@@ -12,7 +12,7 @@ const {
 } = require('docx');
 const { ultimaMinuta } = require('../services/store');
 const { getTemplate } = require('../services/docxTemplates');
-const { resolverMalhas, gerarTextoMalhas } = require('../services/malhas');
+const { MALHAS, resolverMalhas, gerarTextoMalhas } = require('../services/malhas');
 
 function resolverConteudo(req) {
   const body = req.body || {};
@@ -37,20 +37,26 @@ function inferirSaudacao(signatarioAntt, cargoAntt) {
   return 'Prezado Senhor';
 }
 
-// Gera nome do arquivo: $numero$ - GREG - $ano$ - $assunto$
-function gerarNomeArquivo(numero, assunto) {
+// Gera nome do arquivo: $numero$ - GREG - $ano$ - $assunto$ - $malha$
+function gerarNomeArquivo(numero, assunto, malhaKey) {
   const sanitize = (s) => (s || '')
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[/\\:*?"<>|]/g, ' ')
     .replace(/[^a-zA-Z0-9\s\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 100);
+    .substring(0, 80);
 
   const seq = (numero || '').replace(/\D/g, '').padStart(4, '0') || '0000';
   const ano = new Date().getFullYear();
   const assuntoSanitized = sanitize(assunto) || 'Carta';
 
-  return `${seq} - GREG - ${ano} - ${assuntoSanitized}.docx`;
+  const malhas = resolverMalhas(malhaKey);
+  const siglaMalha = malhas.length > 0 ? malhas.map(m => m.sigla).join(', ') : '';
+
+  return siglaMalha
+    ? `${seq} - GREG - ${ano} - ${assuntoSanitized} - ${siglaMalha}.docx`
+    : `${seq} - GREG - ${ano} - ${assuntoSanitized}.docx`;
 }
 
 async function exportarDocx(req, res, next) {
@@ -153,7 +159,7 @@ async function exportarDocx(req, res, next) {
       });
 
       const buffer = doc.getZip().generate({ type: 'nodebuffer' });
-      const nomeArquivo = gerarNomeArquivo(numeroOficio, assunto);
+      const nomeArquivo = gerarNomeArquivo(numeroOficio, assunto, malhaKey);
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
       return res.send(buffer);
@@ -195,7 +201,7 @@ async function exportarDocx(req, res, next) {
     });
 
     const buffer = await Packer.toBuffer(doc);
-    const nomeArquivo = gerarNomeArquivo(numeroOficio, assunto);
+    const nomeArquivo = gerarNomeArquivo(numeroOficio, assunto, malhaKey);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
     res.send(buffer);
