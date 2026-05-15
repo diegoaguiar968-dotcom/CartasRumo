@@ -195,8 +195,9 @@ async function exportarDocx(req, res, next) {
     });
 
     const buffer = await Packer.toBuffer(doc);
+    const nomeArquivo = gerarNomeArquivo(numeroOficio, assunto);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', 'attachment; filename=resposta-antt.docx');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
     res.send(buffer);
   } catch (err) {
     next(err);
