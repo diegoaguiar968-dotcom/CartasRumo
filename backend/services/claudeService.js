@@ -439,7 +439,7 @@ Comece diretamente com o primeiro parágrafo.` : ''}`;
 
   const dataHoje = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  const userMessage = `Redija uma carta formal da ${malha?.nome || '[ENTIDADE RUMO]'} dirigida à ANTT.
+  const userMessage = `Redija uma carta formal da ${textoMalhas?.nomesResumidos || '[ENTIDADE RUMO]'} dirigida à ANTT.
 
 ═══════════ TIPO ═══════════
 Comunicação espontânea — a Rumo está tomando a iniciativa de comunicar algo à ANTT, SEM ter recebido ofício prévio.
