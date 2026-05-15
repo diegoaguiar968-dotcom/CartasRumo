@@ -15,6 +15,7 @@ const minutaRoutes = require('./routes/minuta');
 const exportRoutes = require('./routes/export');
 const { requestLogger } = require('./middleware/logger');
 const { errorHandler } = require('./middleware/errorHandler');
+const { sessionMiddleware } = require('./middleware/session');
 const { carregarTemplatesFixos } = require('./services/templateService');
 const { modelosPermanentes } = require('./services/store');
 
@@ -31,6 +32,7 @@ if (!fs.existsSync(uploadDir)) {
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
+app.use(sessionMiddleware);
 
 // ─── Rotas ───
 app.get('/api/status', (req, res) => {

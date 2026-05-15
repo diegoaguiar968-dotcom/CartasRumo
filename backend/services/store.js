@@ -1,20 +1,59 @@
 /**
  * services/store.js
- * Armazenamento em memória para modelos e ofícios processados.
+ * Armazenamento em memória isolado por sessão.
  *
- * NOTA: Este store é volátil — os dados são perdidos ao reiniciar o servidor.
- * Para persistência, substitua por um banco de dados (PostgreSQL, MongoDB, etc.)
+ * Cada usuário recebe um UUID (X-Session-ID) gerado no frontend.
+ * Sessões inativas por mais de 2 horas são removidas automaticamente.
+ * modelosPermanentes é global — carregado na inicialização e compartilhado.
  */
 
-const modelos = [];   // PDFs/DOCXs enviados pelo usuário (limite: 5)
-const oficios = [];   // Ofícios da ANTT processados
-const modelosPermanentes = []; // DOCXs fixos de backend/templates/ (carregados na inicialização)
-const documentosComplementares = []; // Documentos relacionados ao ofício (nota técnica, resolução, etc.)
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 horas
 
-// Última minuta gerada — usada pelos endpoints GET de export
-const ultimaMinuta = {
-  texto: '', signatario: '', cargo: '', modeloId: 'objetiva',
-  signatarioAntt: '', cargoAntt: '', processo: '', assunto: '', referencia: '', malha: '',
-};
+const sessions = new Map();
 
-module.exports = { modelos, oficios, modelosPermanentes, documentosComplementares, ultimaMinuta };
+function createSessionData() {
+  return {
+    modelos: [],
+    oficios: [],
+    documentosComplementares: [],
+    ultimaMinuta: {
+      texto: '',
+      signatario: '',
+      cargo: '',
+      modeloId: 'objetiva',
+      signatarioAntt: '',
+      cargoAntt: '',
+      processo: '',
+      assunto: '',
+      referencia: '',
+      malha: '',
+    },
+    lastActivity: Date.now(),
+  };
+}
+
+function getSession(sessionId) {
+  const key = sessionId || 'anonymous';
+  let session = sessions.get(key);
+  if (!session) {
+    session = createSessionData();
+    sessions.set(key, session);
+  }
+  session.lastActivity = Date.now();
+  return session;
+}
+
+// Limpeza automática de sessões inativas
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of sessions) {
+    if (now - session.lastActivity > SESSION_TTL_MS) {
+      sessions.delete(id);
+    }
+  }
+}, 30 * 60 * 1000).unref();
+
+// Modelos fixos carregados na inicialização — compartilhados entre todas as sessões
+const modelosPermanentes = [];
+
+module.exports = { getSession, modelosPermanentes };

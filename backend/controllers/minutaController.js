@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { gerarMinuta, refinarMinuta, gerarCartaEspontanea, gerarAssuntoCurto } = require('../services/claudeService');
 const { getTemplate } = require('../services/docxTemplates');
-const { modelos, oficios, modelosPermanentes, documentosComplementares, ultimaMinuta } = require('../services/store');
+const { getSession, modelosPermanentes } = require('../services/store');
 
 // Remove markdown artifacts e prefixos indesejados gerados pela IA
 function limparMarkdown(texto) {
@@ -47,13 +47,13 @@ function tratamento(nome) {
 
 async function gerarMinutaHandler(req, res, next) {
   try {
+    const session = getSession(req.sessionId);
     const modeloId = req.body.modeloId || 'objetiva';
     const template = getTemplate(modeloId);
 
-    // Aceita 'briefing' do body ou usa o último ofício processado no store
     let briefing = req.body.briefing;
     if (!briefing) {
-      const ultimoOficio = oficios[oficios.length - 1];
+      const ultimoOficio = session.oficios[session.oficios.length - 1];
       if (ultimoOficio?.briefing) {
         briefing = ultimoOficio.briefing;
       } else {
@@ -70,7 +70,7 @@ async function gerarMinutaHandler(req, res, next) {
       resposta: item.resposta || '',
     }));
 
-    const textoModelosReferencia = [...modelosPermanentes, ...modelos]
+    const textoModelosReferencia = [...modelosPermanentes, ...session.modelos]
       .map((m) => m.textoExtraido)
       .join('\n\n---\n\n')
       .substring(0, 8000);
@@ -85,24 +85,22 @@ async function gerarMinutaHandler(req, res, next) {
     const textoRaw = await gerarMinuta({
       briefing, pontosRespondidos,
       textoModelosReferencia, templateHint: template.claudeHint, usaTemplate,
-      contextosAdicionais: documentosComplementares.length ? [...documentosComplementares] : undefined,
+      contextosAdicionais: session.documentosComplementares.length ? [...session.documentosComplementares] : undefined,
     });
 
     const textoMinuta = limparMarkdown(textoRaw);
     console.log('[Minuta] Gerada com sucesso.');
 
-    // Parseia o signatário da ANTT para separar nome e cargo
     const { nome: nomeAntt, cargo: cargoAntt } = parsearSignatarioAntt(briefing?.signatarioAntt);
 
-    // Persiste no store
-    ultimaMinuta.texto        = textoMinuta;
-    ultimaMinuta.modeloId     = modeloId;
-    ultimaMinuta.signatarioAntt = nomeAntt ? `${tratamento(nomeAntt)} ${nomeAntt}` : '';
-    ultimaMinuta.cargoAntt    = cargoAntt;
-    ultimaMinuta.malha        = briefing?.malha || '';
-    ultimaMinuta.processo     = briefing?.processo || '';
-    ultimaMinuta.assunto      = briefing?.assunto || `Atendimento ao ${briefing?.numero || 'ofício da ANTT'}`;
-    ultimaMinuta.referencia   = briefing?.numero || '';
+    session.ultimaMinuta.texto        = textoMinuta;
+    session.ultimaMinuta.modeloId     = modeloId;
+    session.ultimaMinuta.signatarioAntt = nomeAntt ? `${tratamento(nomeAntt)} ${nomeAntt}` : '';
+    session.ultimaMinuta.cargoAntt    = cargoAntt;
+    session.ultimaMinuta.malha        = briefing?.malha || '';
+    session.ultimaMinuta.processo     = briefing?.processo || '';
+    session.ultimaMinuta.assunto      = briefing?.assunto || `Atendimento ao ${briefing?.numero || 'ofício da ANTT'}`;
+    session.ultimaMinuta.referencia   = briefing?.numero || '';
 
     res.json({
       success: true,
@@ -114,13 +112,13 @@ async function gerarMinutaHandler(req, res, next) {
       resposta: textoMinuta,
       content: textoMinuta,
       meta: {
-        signatarioAntt: ultimaMinuta.signatarioAntt,
-        cargoAntt:      ultimaMinuta.cargoAntt,
-        malha:          ultimaMinuta.malha,
-        assunto:        ultimaMinuta.assunto,
-        processo:       ultimaMinuta.processo,
-        referencia:     ultimaMinuta.referencia,
-        modeloId:       ultimaMinuta.modeloId,
+        signatarioAntt: session.ultimaMinuta.signatarioAntt,
+        cargoAntt:      session.ultimaMinuta.cargoAntt,
+        malha:          session.ultimaMinuta.malha,
+        assunto:        session.ultimaMinuta.assunto,
+        processo:       session.ultimaMinuta.processo,
+        referencia:     session.ultimaMinuta.referencia,
+        modeloId:       session.ultimaMinuta.modeloId,
       },
     });
   } catch (err) {
@@ -130,6 +128,7 @@ async function gerarMinutaHandler(req, res, next) {
 
 async function refinarMinutaHandler(req, res, next) {
   try {
+    const session = getSession(req.sessionId);
     const { textoAtual, mensagem, historico } = req.body;
     if (!textoAtual) return res.status(400).json({ success: false, message: 'textoAtual é obrigatório.' });
     if (!mensagem?.trim()) return res.status(400).json({ success: false, message: 'mensagem é obrigatória.' });
@@ -139,7 +138,7 @@ async function refinarMinutaHandler(req, res, next) {
       textoAtual, mensagem: mensagem.trim(), historico: historico || [],
     }));
 
-    ultimaMinuta.texto = textoRefinado;
+    session.ultimaMinuta.texto = textoRefinado;
     res.json({ success: true, texto: textoRefinado, minuta: textoRefinado });
   } catch (err) {
     next(err);
@@ -148,6 +147,7 @@ async function refinarMinutaHandler(req, res, next) {
 
 async function gerarCartaEspontaneaHandler(req, res, next) {
   try {
+    const session = getSession(req.sessionId);
     const { modeloId, destinatario, cargoDestinatario, area, malha: malhaKey, referencia, processo, assunto } = req.body;
 
     if (!assunto?.trim()) {
@@ -161,7 +161,7 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
     const templatePath = template.arquivo ? path.join(__dirname, '../templates', template.arquivo) : null;
     const usaTemplate = !!(templatePath && fs.existsSync(templatePath));
 
-    const textoModelosReferencia = [...modelosPermanentes, ...modelos]
+    const textoModelosReferencia = [...modelosPermanentes, ...session.modelos]
       .map(m => m.textoExtraido).join('\n\n---\n\n').substring(0, 8000);
 
     const textoRaw = await gerarCartaEspontanea({
@@ -172,7 +172,7 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
       textoModelosReferencia,
       templateHint: template.claudeHint,
       usaTemplate,
-      contextosAdicionais: documentosComplementares.length ? [...documentosComplementares] : undefined,
+      contextosAdicionais: session.documentosComplementares.length ? [...session.documentosComplementares] : undefined,
     });
 
     const textoMinuta = limparMarkdown(textoRaw);
@@ -181,27 +181,27 @@ async function gerarCartaEspontaneaHandler(req, res, next) {
     const textoMalhas = gerarTextoMalhas(resolverMalhas(malhaKey));
     const assuntoCurto = await gerarAssuntoCurto(assunto, textoMalhas?.nomesResumidos || '');
 
-    ultimaMinuta.texto         = textoMinuta;
-    ultimaMinuta.modeloId      = modeloId || 'documentacao';
-    ultimaMinuta.signatarioAntt = destinatario ? `${tratamento(destinatario)} ${destinatario}` : '';
-    ultimaMinuta.cargoAntt     = cargoDestinatario || '';
-    ultimaMinuta.malha         = malhaKey || '';
-    ultimaMinuta.processo      = processo?.trim() || '';
-    ultimaMinuta.assunto       = assuntoCurto;
-    ultimaMinuta.referencia    = referencia?.trim() || '';
+    session.ultimaMinuta.texto         = textoMinuta;
+    session.ultimaMinuta.modeloId      = modeloId || 'documentacao';
+    session.ultimaMinuta.signatarioAntt = destinatario ? `${tratamento(destinatario)} ${destinatario}` : '';
+    session.ultimaMinuta.cargoAntt     = cargoDestinatario || '';
+    session.ultimaMinuta.malha         = malhaKey || '';
+    session.ultimaMinuta.processo      = processo?.trim() || '';
+    session.ultimaMinuta.assunto       = assuntoCurto;
+    session.ultimaMinuta.referencia    = referencia?.trim() || '';
 
     res.json({
       success: true,
       minuta: textoMinuta,
       texto: textoMinuta,
       meta: {
-        signatarioAntt: ultimaMinuta.signatarioAntt,
-        cargoAntt:      ultimaMinuta.cargoAntt,
-        malha:          ultimaMinuta.malha,
-        assunto:        ultimaMinuta.assunto,
-        processo:       ultimaMinuta.processo,
-        referencia:     ultimaMinuta.referencia,
-        modeloId:       ultimaMinuta.modeloId,
+        signatarioAntt: session.ultimaMinuta.signatarioAntt,
+        cargoAntt:      session.ultimaMinuta.cargoAntt,
+        malha:          session.ultimaMinuta.malha,
+        assunto:        session.ultimaMinuta.assunto,
+        processo:       session.ultimaMinuta.processo,
+        referencia:     session.ultimaMinuta.referencia,
+        modeloId:       session.ultimaMinuta.modeloId,
       },
     });
   } catch (err) {

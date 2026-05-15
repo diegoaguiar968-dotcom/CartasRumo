@@ -10,11 +10,11 @@ const Docxtemplater = require('docxtemplater');
 const {
   Document, Paragraph, TextRun, AlignmentType, HeadingLevel, Packer,
 } = require('docx');
-const { ultimaMinuta } = require('../services/store');
+const { getSession } = require('../services/store');
 const { getTemplate } = require('../services/docxTemplates');
 const { MALHAS, resolverMalhas, gerarTextoMalhas } = require('../services/malhas');
 
-function resolverConteudo(req) {
+function resolverConteudo(req, ultimaMinuta) {
   const body = req.body || {};
   const dadosResposta = body.dadosResposta || {};
   const conteudo =
@@ -61,10 +61,13 @@ function gerarNomeArquivo(numero, assunto, malhaKey) {
 
 async function exportarDocx(req, res, next) {
   try {
-    const { conteudo } = resolverConteudo(req);
+    const session = getSession(req.sessionId);
+    const { ultimaMinuta } = session;
+
+    const { conteudo } = resolverConteudo(req, ultimaMinuta);
     const numeroOficio = req.body?.numero_oficio?.trim() || '';
 
-    // Metadados enviados pelo frontend — fallback para o store em memória
+    // Metadados enviados pelo frontend — fallback para o store da sessão
     const meta = req.body?.meta || {};
     const signatarioAntt = meta.signatarioAntt ?? ultimaMinuta.signatarioAntt ?? '';
     const cargoAntt      = meta.cargoAntt      ?? ultimaMinuta.cargoAntt      ?? '';
@@ -166,6 +169,8 @@ async function exportarDocx(req, res, next) {
     }
 
     // ── Fallback: geração programática (sem arquivo de template) ──
+    const malhasResolvidas = resolverMalhas(malhaKey);
+    const textoMalhas = gerarTextoMalhas(malhasResolvidas);
     const style = template.docxStyle;
     const paragrafos = conteudo.split('\n').map(
       (linha) => new Paragraph({

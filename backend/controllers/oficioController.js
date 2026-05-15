@@ -5,13 +5,15 @@
 
 const { extrairTextoPDF, textoEhLegivel } = require('../services/pdfService');
 const { extrairBriefingOficio, extrairBriefingOficioPDF } = require('../services/claudeService');
-const { oficios, documentosComplementares } = require('../services/store');
+const { getSession } = require('../services/store');
 
 async function uploadOficio(req, res, next) {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado.' });
     }
+
+    const session = getSession(req.sessionId);
 
     console.log('[Ofício] Extraindo texto do PDF...');
     const textoOficio = await extrairTextoPDF(req.file.path);
@@ -26,7 +28,7 @@ async function uploadOficio(req, res, next) {
     }
 
     // Novo ofício: limpa documentos complementares da sessão anterior
-    documentosComplementares.splice(0);
+    session.documentosComplementares.splice(0);
 
     // Armazena para uso posterior na geração da minuta
     const oficio = {
@@ -36,11 +38,10 @@ async function uploadOficio(req, res, next) {
       briefing,
       dataProcessamento: new Date().toISOString(),
     };
-    oficios.push(oficio);
+    session.oficios.push(oficio);
 
     console.log('[Ofício] Briefing extraído com sucesso:', briefing.numero);
 
-    // Resposta com o briefing em múltiplos campos para compatibilidade com o frontend
     res.json({
       success: true,
       message: 'Ofício processado com sucesso.',
@@ -63,15 +64,16 @@ async function uploadComplementar(req, res, next) {
       return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado.' });
     }
 
+    const session = getSession(req.sessionId);
     const texto = await extrairTextoPDF(req.file.path);
     const doc = {
       id: Date.now(),
       nome: req.file.originalname,
-      texto: texto.substring(0, 8000), // limita contexto por documento
+      texto: texto.substring(0, 8000),
     };
-    documentosComplementares.push(doc);
+    session.documentosComplementares.push(doc);
 
-    console.log(`[Complementar] Documento adicionado: ${doc.nome} (${documentosComplementares.length} total)`);
+    console.log(`[Complementar] Documento adicionado: ${doc.nome} (${session.documentosComplementares.length} total)`);
     res.json({ success: true, id: doc.id, nome: doc.nome });
   } catch (err) {
     next(err);
@@ -79,10 +81,11 @@ async function uploadComplementar(req, res, next) {
 }
 
 function removeComplementar(req, res) {
+  const session = getSession(req.sessionId);
   const id = parseInt(req.params.id, 10);
-  const idx = documentosComplementares.findIndex(d => d.id === id);
+  const idx = session.documentosComplementares.findIndex(d => d.id === id);
   if (idx === -1) return res.status(404).json({ success: false, message: 'Documento não encontrado.' });
-  documentosComplementares.splice(idx, 1);
+  session.documentosComplementares.splice(idx, 1);
   res.json({ success: true });
 }
 
