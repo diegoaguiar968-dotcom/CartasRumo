@@ -37,25 +37,20 @@ function inferirSaudacao(signatarioAntt, cargoAntt) {
   return 'Prezado Senhor';
 }
 
-// Gera nome do arquivo a partir do número da carta e assunto
-function gerarNomeArquivo(numeroOficio, assunto) {
+// Gera nome do arquivo: $numero$ - GREG - $ano$ - $assunto$
+function gerarNomeArquivo(numero, assunto) {
   const sanitize = (s) => (s || '')
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .replace(/[^a-zA-Z0-9\s\-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 80);
+    .substring(0, 100);
 
-  // Parseia OF.RUMO.DIR.REG.001/2025 → seq=001, gerencia=DIRREG, ano=2025
-  const parts = (numeroOficio || '').split('.');
-  const lastPart = parts[parts.length - 1] || '';
-  const [seq, ano] = lastPart.split('/');
-  const gerencia = parts.slice(2, parts.length - 1).join('') || 'RUMO';
-  const seqNum = (seq || '').replace(/\D/g, '').padStart(4, '0') || '0000';
-  const anoFinal = ano || new Date().getFullYear();
+  const seq = (numero || '').replace(/\D/g, '').padStart(4, '0') || '0000';
+  const ano = new Date().getFullYear();
   const assuntoSanitized = sanitize(assunto) || 'Carta';
 
-  return `${seqNum} - ${gerencia} - ${anoFinal} - ${assuntoSanitized}.docx`;
+  return `${seq} - GREG - ${ano} - ${assuntoSanitized}.docx`;
 }
 
 async function exportarDocx(req, res, next) {
