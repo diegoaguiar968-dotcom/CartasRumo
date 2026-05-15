@@ -3,8 +3,8 @@
  * Upload do ofício da ANTT e extração inteligente de dados via Claude
  */
 
-const { extrairTextoPDF } = require('../services/pdfService');
-const { extrairBriefingOficio } = require('../services/claudeService');
+const { extrairTextoPDF, textoEhLegivel } = require('../services/pdfService');
+const { extrairBriefingOficio, extrairBriefingOficioPDF } = require('../services/claudeService');
 const { oficios, documentosComplementares } = require('../services/store');
 
 async function uploadOficio(req, res, next) {
@@ -16,8 +16,14 @@ async function uploadOficio(req, res, next) {
     console.log('[Ofício] Extraindo texto do PDF...');
     const textoOficio = await extrairTextoPDF(req.file.path);
 
-    console.log('[Ofício] Enviando para Claude extrair briefing...');
-    const briefing = await extrairBriefingOficio(textoOficio);
+    let briefing;
+    if (textoEhLegivel(textoOficio)) {
+      console.log('[Ofício] Texto legível — extraindo briefing via texto...');
+      briefing = await extrairBriefingOficio(textoOficio);
+    } else {
+      console.log('[Ofício] Texto ilegível (PDF com codificação especial ou escaneado) — usando leitura nativa de PDF pelo Claude...');
+      briefing = await extrairBriefingOficioPDF(req.file.path);
+    }
 
     // Novo ofício: limpa documentos complementares da sessão anterior
     documentosComplementares.splice(0);

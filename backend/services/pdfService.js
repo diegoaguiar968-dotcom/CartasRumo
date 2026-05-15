@@ -18,6 +18,20 @@ async function extrairTextoPDF(filePath) {
 }
 
 /**
+ * Verifica se o texto extraído de um PDF é legível e útil.
+ * PDFs com codificação de fonte customizada (comum no SEI/governo) retornam
+ * texto ilegível — caracteres fora do range latino ou razão de lixo > 35%.
+ * @param {string} texto
+ * @returns {boolean}
+ */
+function textoEhLegivel(texto) {
+  if (!texto || texto.trim().length < 150) return false;
+  // Conta caracteres legíveis: letras (incluindo acentuadas), dígitos, pontuação e espaços
+  const legiveis = (texto.match(/[a-záàâãéèêíïóôõöúüçñ0-9\s.,;:!?()\[\]"'\-\/\n]/gi) || []).length;
+  return legiveis / texto.length > 0.62;
+}
+
+/**
  * Processa múltiplos PDFs e retorna um resumo de cada um para uso como modelos de referência.
  * @param {Array<{path: string, originalname: string, size: number}>} files
  * @returns {Promise<Array>}
@@ -45,4 +59,5 @@ async function processarModelosPDF(files) {
   return resultados;
 }
 
-module.exports = { extrairTextoPDF, processarModelosPDF };
+module.exports = { extrairTextoPDF, textoEhLegivel, processarModelosPDF };
+

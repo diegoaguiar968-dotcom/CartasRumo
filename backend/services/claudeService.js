@@ -148,6 +148,105 @@ Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação 
 }
 
 /**
+ * Extrai briefing de ofício enviando o PDF diretamente ao Claude (leitura nativa).
+ * Usado como fallback quando pdf-parse retorna texto ilegível (PDFs do SEI/governo
+ * com codificação de fonte customizada ou documentos escaneados).
+ * @param {string} pdfPath - Caminho absoluto do arquivo PDF
+ * @returns {Promise<Object>} - Briefing estruturado
+ */
+async function extrairBriefingOficioPDF(pdfPath) {
+  const fs = require('fs');
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY não configurada.');
+
+  const pdfBase64 = fs.readFileSync(pdfPath).toString('base64');
+
+  const systemPrompt = `Você é um especialista em análise de documentos regulatórios do setor ferroviário brasileiro.
+Sua tarefa é extrair informações estruturadas de ofícios da ANTT (Agência Nacional de Transportes Terrestres).
+Responda APENAS com JSON válido, sem nenhum texto antes ou depois, sem blocos de código markdown.`;
+
+  const userPrompt = `Analise o ofício da ANTT no documento acima e extraia as informações abaixo em formato JSON.
+
+Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
+{
+  "numero": "número/identificação do próprio ofício (ex: OFÍCIO SEI Nº 13884/2026/SUSPI/DIR-ANTT) ou 'Não identificado'",
+  "processo": "número do processo administrativo/SEI — formato NNNNN.NNNNNN/AAAA-NN. Procure por 'Processo nº', 'SEI nº'. Se não encontrar, retorne 'Não identificado'",
+  "data": "data do ofício (ex: 15/04/2025) ou 'Não identificada'",
+  "signatarioAntt": "nome e cargo do signatário da ANTT ou 'Não identificado'",
+  "area": "superintendência ou área da ANTT (ex: SUFER, GEROP) ou 'Não identificada'",
+  "prazo": "prazo de resposta mencionado ou 'Não especificado'",
+  "natureza": "tipo da solicitação (ex: Requerimento de Informações, Solicitação de Documentos) ou 'Não identificada'",
+  "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
+  "malha": "qual entidade do grupo Rumo é destinatária — EXATAMENTE uma de: rumo | norte | paulista | oeste | sul | central | não identificada",
+  "pontos": ["ponto 1 a ser respondido", "ponto 2 a ser respondido"],
+  "documentosRequisitados": ["documento 1 solicitado"]
+}
+
+Para 'malha': procure referências a contratos de concessão, trechos ferroviários ou razão social. Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.`;
+
+  const body = {
+    model: MODEL,
+    max_tokens: 1500,
+    system: systemPrompt,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
+        },
+        { type: 'text', text: userPrompt },
+      ],
+    }],
+  };
+
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(ANTHROPIC_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'pdfs-2024-09-25',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(`Claude API status ${response.status}: ${err?.error?.message || 'Erro'}`);
+      }
+
+      const data = await response.json();
+      const textBlock = data.content?.find(b => b.type === 'text');
+      if (!textBlock) throw new Error('Resposta sem bloco de texto');
+
+      const cleaned = textBlock.text.replace(/```json|```/gi, '').trim();
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        console.error('[Claude/PDF] Falha ao parsear JSON:', cleaned.substring(0, 200));
+        return {
+          numero: 'Não identificado', processo: 'Não identificado',
+          data: 'Não identificada', signatarioAntt: 'Não identificado',
+          area: 'Não identificada', prazo: 'Não especificado',
+          natureza: 'Requerimento de Informação', fundamentoLegal: 'Não citado',
+          malha: 'não identificada',
+          pontos: ['Não foi possível extrair os pontos automaticamente. Por favor, revise o PDF.'],
+          documentosRequisitados: [],
+        };
+      }
+    } catch (err) {
+      lastError = err;
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000));
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Gera uma minuta de resposta ao ofício com base no briefing e nas informações fornecidas pelo usuário.
  * @param {Object} params
  * @param {Object} params.briefing - Briefing extraído do ofício
@@ -392,4 +491,4 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
   );
 }
 
-module.exports = { callClaude, extrairBriefingOficio, gerarMinuta, refinarMinuta, gerarCartaEspontanea };
+module.exports = { callClaude, extrairBriefingOficio, extrairBriefingOficioPDF, gerarMinuta, refinarMinuta, gerarCartaEspontanea };
