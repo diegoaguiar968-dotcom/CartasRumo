@@ -37,9 +37,9 @@ const MALHAS = {
 };
 
 /**
- * Retorna os dados da malha identificada ou um placeholder caso não identificada.
- * @param {string} chave - Chave retornada pelo Claude (ex: 'norte', 'sul', 'não identificada')
- * @returns {{ nome: string, sigla: string, cnpj: string }}
+ * Resolve uma única malha pela chave.
+ * @param {string} chave
+ * @returns {{ nome, sigla, cnpj } | null}
  */
 function resolverMalha(chave) {
   if (!chave) return null;
@@ -47,4 +47,60 @@ function resolverMalha(chave) {
   return MALHAS[key] || null;
 }
 
-module.exports = { MALHAS, resolverMalha };
+/**
+ * Resolve uma ou mais malhas. Aceita string única, string com vírgulas ou array.
+ * @param {string|string[]} chaves
+ * @returns {Array<{ nome, sigla, cnpj }>}
+ */
+function resolverMalhas(chaves) {
+  if (!chaves) return [];
+  const lista = Array.isArray(chaves)
+    ? chaves
+    : String(chaves).split(',').map(s => s.trim());
+  return lista.map(c => resolverMalha(c)).filter(Boolean);
+}
+
+/**
+ * Gera os blocos de texto padrão ANTT para uma ou múltiplas entidades.
+ *
+ * Single:
+ *   identificacao → 'RUMO MALHA PAULISTA S.A. ("RMP"), inscrita no CNPJ/MF sob o nº ...'
+ *   abertura      → 'A RUMO MALHA PAULISTA S.A. ... concessionária ..., vem, ...'
+ *
+ * Múltiplas:
+ *   identificacao → 'RUMO S.A. ("RUMO"), inscrita...; RUMO MALHA NORTE S.A. ("RMN"), inscrita...; e RUMO MALHA CENTRAL S.A. ...'
+ *   abertura      → '[identificacao], concessionárias ..., vêm, ...'
+ *
+ * @param {Array<{ nome, sigla, cnpj }>} malhas
+ * @returns {{ identificacao, abertura, plural } | null}
+ */
+function gerarTextoMalhas(malhas) {
+  if (!malhas || malhas.length === 0) return null;
+
+  if (malhas.length === 1) {
+    const m = malhas[0];
+    const id = `${m.nome} ("${m.sigla}"), inscrita no CNPJ/MF sob o nº ${m.cnpj}`;
+    return {
+      identificacao: id,
+      abertura: `A ${id}, concessionária prestadora do serviço público de transporte ferroviário de cargas,`,
+      nomesResumidos: m.nome,
+      plural: false,
+    };
+  }
+
+  // Múltiplas — lista com ponto-e-vírgula, "e" antes da última
+  const partes = malhas.map((m, i) => {
+    const prefixo = i === malhas.length - 1 ? 'e ' : '';
+    return `${prefixo}${m.nome} ("${m.sigla}"), inscrita no CNPJ sob o nº ${m.cnpj}`;
+  });
+  const id = partes.join('; ');
+  return {
+    identificacao: id,
+    abertura: `${id}, concessionárias prestadoras do serviço público de transporte ferroviário de cargas,`,
+    nomesResumidos: malhas.map(m => m.nome).join(', '),
+    plural: true,
+  };
+}
+
+module.exports = { MALHAS, resolverMalha, resolverMalhas, gerarTextoMalhas };
+

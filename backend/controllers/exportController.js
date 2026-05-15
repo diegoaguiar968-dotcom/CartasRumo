@@ -12,7 +12,7 @@ const {
 } = require('docx');
 const { ultimaMinuta } = require('../services/store');
 const { getTemplate } = require('../services/docxTemplates');
-const { resolverMalha } = require('../services/malhas');
+const { resolverMalhas, gerarTextoMalhas } = require('../services/malhas');
 
 function resolverConteudo(req) {
   const body = req.body || {};
@@ -84,7 +84,8 @@ async function exportarDocx(req, res, next) {
 
     if (templatePath && fs.existsSync(templatePath)) {
       // ── Exportação via template DOCX com docxtemplater ──
-      const malha = resolverMalha(malhaKey);
+      const malhasResolvidas = resolverMalhas(malhaKey);
+      const textoMalhas = gerarTextoMalhas(malhasResolvidas);
       const fileContent = fs.readFileSync(templatePath, 'binary');
       const zip = new PizZip(fileContent);
 
@@ -153,7 +154,7 @@ async function exportarDocx(req, res, next) {
         referenciaItems: referencia ? [{ referencia }] : [],
         assunto,
         paragrafos,
-        regulada: malha ? malha.nome : '',
+        regulada: textoMalhas?.nomesResumidos || '',
       });
 
       const buffer = doc.getZip().generate({ type: 'nodebuffer' });
@@ -192,7 +193,7 @@ async function exportarDocx(req, res, next) {
           new Paragraph({ children: [new TextRun({ text: '', break: 2 })] }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: malha ? malha.nome : 'RUMO S.A.', bold: true, font: style.fonte, size: style.tamanho })],
+            children: [new TextRun({ text: textoMalhas?.nomesResumidos || 'RUMO S.A.', bold: true, font: style.fonte, size: style.tamanho })],
           }),
         ],
       }],

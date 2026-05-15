@@ -5,7 +5,7 @@
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
-const { resolverMalha } = require('./malhas');
+const { resolverMalhas, gerarTextoMalhas } = require('./malhas');
 
 /**
  * Faz uma chamada à API Claude com retry automático em caso de sobrecarga.
@@ -100,7 +100,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "prazo": "prazo de resposta mencionado ou 'Não especificado'",
   "natureza": "tipo da solicitação (ex: Requerimento de Informações, Solicitação de Documentos) ou 'Não identificada'",
   "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
-  "malha": "qual entidade do grupo Rumo é destinatária ou mencionada no ofício — responda EXATAMENTE com uma das opções: rumo | norte | paulista | oeste | sul | central | não identificada",
+  "malha": "quais entidades do grupo Rumo são destinatárias ou mencionadas no ofício — responda com uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte' para múltiplas. Use 'não identificada' se nenhuma for identificada.",
   "pontos": [
     "ponto 1 a ser respondido",
     "ponto 2 a ser respondido"
@@ -114,7 +114,7 @@ ATENÇÃO — distinção obrigatória entre 'numero' e 'processo':
 - 'numero': é a identificação do próprio ofício (ex: "OFÍCIO SEI Nº 13884/2026/SUSPI/DIR-ANTT")
 - 'processo': é o número do processo administrativo/SEI vinculado (ex: "50505.018666/2026-59"), que segue o padrão NNNNN.NNNNNN/AAAA-NN. São sempre valores distintos.
 
-Para o campo 'malha': procure no texto referências a contratos de concessão, trechos ferroviários, estados atendidos ou razão social. Use 'rumo' para RUMO S.A. (holding), 'norte' para Malha Norte, 'paulista' para Malha Paulista, 'oeste' para Malha Oeste, 'sul' para Malha Sul, 'central' para Malha Central.
+Para o campo 'malha': procure referências a contratos de concessão, trechos ferroviários, estados atendidos ou razão social. Pode haver múltiplas entidades — separe por vírgula (ex: 'paulista,norte'). Chaves: 'rumo' (RUMO S.A. holding), 'norte', 'paulista', 'oeste', 'sul', 'central'.
 Se não houver pontos claros, crie pelo menos 1 ponto resumindo a solicitação principal.`;
 
   const rawResponse = await callClaude(
@@ -177,7 +177,7 @@ Retorne EXATAMENTE neste formato JSON (sem markdown, apenas o JSON puro):
   "prazo": "prazo de resposta mencionado ou 'Não especificado'",
   "natureza": "tipo da solicitação (ex: Requerimento de Informações, Solicitação de Documentos) ou 'Não identificada'",
   "fundamentoLegal": "normas, resoluções ou contratos citados ou 'Não citado'",
-  "malha": "qual entidade do grupo Rumo é destinatária — EXATAMENTE uma de: rumo | norte | paulista | oeste | sul | central | não identificada",
+  "malha": "quais entidades do grupo Rumo são destinatárias — uma ou mais chaves separadas por vírgula: rumo | norte | paulista | oeste | sul | central. Ex.: 'paulista,norte'. Use 'não identificada' se nenhuma identificada.",
   "pontos": ["ponto 1 a ser respondido", "ponto 2 a ser respondido"],
   "documentosRequisitados": ["documento 1 solicitado"]
 }
@@ -255,15 +255,12 @@ Para 'malha': procure referências a contratos de concessão, trechos ferroviár
  * @returns {Promise<string>} - Texto da minuta gerada
  */
 async function gerarMinuta({ briefing, pontosRespondidos, textoModelosReferencia, templateHint, usaTemplate, contextosAdicionais }) {
-  // Resolve os dados cadastrais da malha identificada
-  const malha = resolverMalha(briefing?.malha);
-  const malhaIdentificada = malha
-    ? `${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}`
-    : '[ENTIDADE NÃO IDENTIFICADA — verificar manualmente]';
-
-  const aberturaObrigatoria = malha
-    ? `A ${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}, concessionária prestadora do serviço público de transporte ferroviário de cargas,`
-    : 'A [ENTIDADE DO GRUPO RUMO], concessionária prestadora do serviço público de transporte ferroviário de cargas,';
+  // Resolve os dados cadastrais da(s) malha(s) identificada(s)
+  const malhas = resolverMalhas(briefing?.malha);
+  const textoMalhas = gerarTextoMalhas(malhas);
+  const malhaIdentificada = textoMalhas?.identificacao || '[ENTIDADE DO GRUPO RUMO]';
+  const aberturaObrigatoria = textoMalhas?.abertura
+    || 'A [ENTIDADE DO GRUPO RUMO], concessionária prestadora do serviço público de transporte ferroviário de cargas,';
 
   const systemPrompt = `Você é o Assistente Regulatório do grupo Rumo, especializado em redigir respostas institucionais a ofícios da ANTT. Você produz minutas formais de alta qualidade, prontas para aprovação e assinatura.
 
@@ -406,14 +403,11 @@ Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a m
  * Gera uma carta espontânea da Rumo dirigida à ANTT (sem ofício de entrada).
  */
 async function gerarCartaEspontanea({ malha: malhaKey, destinatario, cargoDestinatario, area, referencia, processo, assunto, textoModelosReferencia, templateHint, usaTemplate, contextosAdicionais }) {
-  const malha = resolverMalha(malhaKey);
-  const malhaIdentificada = malha
-    ? `${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}`
-    : '[ENTIDADE NÃO IDENTIFICADA — verificar manualmente]';
-
-  const aberturaObrigatoria = malha
-    ? `A ${malha.nome} ("${malha.sigla}"), inscrita no CNPJ/MF sob nº ${malha.cnpj}, concessionária prestadora do serviço público de transporte ferroviário de cargas,`
-    : 'A [ENTIDADE DO GRUPO RUMO], concessionária prestadora do serviço público de transporte ferroviário de cargas,';
+  const malhas = resolverMalhas(malhaKey);
+  const textoMalhas = gerarTextoMalhas(malhas);
+  const malhaIdentificada = textoMalhas?.identificacao || '[ENTIDADE DO GRUPO RUMO]';
+  const aberturaObrigatoria = textoMalhas?.abertura
+    || 'A [ENTIDADE DO GRUPO RUMO], concessionária prestadora do serviço público de transporte ferroviário de cargas,';
 
   const systemPrompt = `Você é o Assistente Regulatório do grupo Rumo, especializado em redigir comunicações institucionais formais à ANTT. Você produz cartas de alta qualidade, prontas para aprovação e assinatura.
 
