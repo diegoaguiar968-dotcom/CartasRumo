@@ -14,7 +14,7 @@ const { resolverMalhas, gerarTextoMalhas } = require('./malhas');
  * @param {number} maxTokens
  * @returns {Promise<string>} - Texto da resposta
  */
-async function callClaude(messages, systemPrompt, maxTokens = 3000) {
+async function callClaude(messages, systemPrompt, maxTokens = 8000) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
@@ -341,7 +341,7 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
   return callClaude(
     [{ role: 'user', content: userMessage }],
     systemPrompt,
-    3000
+    8000
   );
 }
 
@@ -397,7 +397,7 @@ Quando o usuário fizer uma pergunta, responda brevemente e depois apresente a m
     messages.push({ role: 'user', content: mensagem });
   }
 
-  const resposta = await callClaude(messages, systemPrompt, 3500);
+  const resposta = await callClaude(messages, systemPrompt, 8000);
   return resposta;
 }
 
@@ -483,7 +483,7 @@ ${usaTemplate ? `1. O PRIMEIRO PARÁGRAFO deve começar OBRIGATORIAMENTE com:
   return callClaude(
     [{ role: 'user', content: userMessage }],
     systemPrompt,
-    3000
+    8000
   );
 }
 
